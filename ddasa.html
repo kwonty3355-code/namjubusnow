@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>남주고 버스 시간</title>
+</head>
+<body>
+
+<h1>남주고 버스 도착 정보</h1>
+
+<p id="time"></p>
+<p id="bus"></p>
+
+<script>
+// 버스 시간표 (여기 나중에 수정)
+const busTimes = ["15:10", "15:25", "15:40", "16:00"];
+
+function updateBus() {
+    const now = new Date();
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    document.getElementById("time").innerText =
+        "현재 시간: " + now.getHours() + ":" + now.getMinutes();
+
+    for (let i = 0; i < busTimes.length; i++) {
+        const [h, m] = busTimes[i].split(":");
+        const busMinutes = parseInt(h) * 60 + parseInt(m);
+
+        if (busMinutes > currentMinutes) {
+            const diff = busMinutes - currentMinutes;
+
+            document.getElementById("bus").innerText =
+                "다음 버스: " + busTimes[i] + " (" + diff + "분 남음)";
+            return;
+        }
+    }
+
+    document.getElementById("bus").innerText = "오늘 버스 없음";
+}
+
+setInterval(updateBus, 1000);
+updateBus();
+</script>
+
+</body>
+</html>
