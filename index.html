@@ -124,7 +124,7 @@
         .tomorrow-time {
             font-size: 1.1rem;
             font-weight: bold;
-            color: #f39c12; /* 내일 버스는 눈에 띄게 주황색으로 표시 */
+            color: #f39c12; 
         }
         .route-info {
             font-size: 0.85rem;
@@ -136,6 +136,10 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .highlight-dest {
+            color: #f39c12; /* 검색한 목적지를 주황색으로 표시 */
+            font-weight: bold;
         }
         .no-result {
             text-align: center;
@@ -189,7 +193,6 @@
 </div>
 
 <script>
-    // 누락된 데이터 없이 꽉꽉 채운 전체 버스 시간표 데이터
     const rawData = `
 510번(6:26 출발)
 남주고 6:26 중앙로터리 6:35 서귀포여자고등학교 6:47 서귀포버스터미널 6:54 대천동주민센터 7:00 중문우체국 7:12 제주 국제컨벤션센터 7:46
@@ -470,7 +473,6 @@
 
     const parsedBuses = [];
 
-    // 동의어 처리 사전
     const aliases = {
         "헬스케어": "헬스케어타운",
         "헬스": "헬스케어타운",
@@ -507,13 +509,11 @@
             if (!titleMatch) return;
             
             const busNo = titleMatch[1].trim();
-            // 여러 줄로 이루어진 노선도 하나로 이어붙여 인식하도록 수정
             const routeStr = lines.slice(1).join(' ').trim(); 
             const stops = parseRouteString(routeStr);
             
             const namjuIndex = stops.findIndex(s => s.name.includes('남주고') || s.name.includes('남주중고'));
             
-            // 하교용: 남주고가 노선에 있고 마지막 종점이 아닐 때
             if (namjuIndex !== -1 && namjuIndex < stops.length - 1) { 
                 parsedBuses.push({
                     busNo: busNo,
@@ -526,7 +526,6 @@
         });
     }
 
-    // 버스 시간과 현재 시간을 비교하여 차이(분)와 내일 여부를 반환
     function getBusTimeInfo(timeStr) {
         const now = new Date();
         const [hours, minutes] = timeStr.split(':').map(Number);
@@ -534,7 +533,6 @@
         let busTime = new Date();
         busTime.setHours(hours, minutes, 0, 0);
         
-        // 자정 넘어가는 심야 버스 처리
         if (hours < 3 && now.getHours() > 18) {
             busTime.setDate(busTime.getDate() + 1);
         }
@@ -542,7 +540,6 @@
         let diff = (busTime - now) / (1000 * 60);
         let isTomorrow = false;
 
-        // 이미 지나간 버스라면 내일 버스로 간주
         if (diff < 0) {
             busTime.setDate(busTime.getDate() + 1);
             diff = (busTime - now) / (1000 * 60);
@@ -552,13 +549,13 @@
         return { diff, isTomorrow };
     }
 
-    function renderBuses(buses) {
+    // 화면 렌더링 (검색어인 searchTerm을 받아서 주황색 처리)
+    function renderBuses(buses, searchTerm = '') {
         const container = document.getElementById('resultList');
         container.innerHTML = '';
 
         if (buses.length === 0) {
-            // 아무 버스도 찾지 못했을 때의 문구
-            container.innerHTML = '<div class="no-result">버스가 오늘 더이상 오지 않거나,<br>남주고에서 바로 갈수 없는 장소에요.</div>';
+            container.innerHTML = '<div class="no-result">남주고등학교에서 바로 갈수없는 장소에요.</div>';
             return;
         }
 
@@ -566,18 +563,27 @@
             const div = document.createElement('div');
             div.className = 'card';
             
+            // 경로 텍스트 생성 중 남주고는 [굵게], 목적지는 주황색으로 표시
             const fullRoute = bus.stops.map((s, idx) => {
-                if(idx === bus.namjuIndex) return `<b>[${s.name} ${s.time}]</b>`;
-                return `${s.name} ${s.time}`;
+                let text = `${s.name} ${s.time}`;
+                
+                if (idx === bus.namjuIndex) {
+                    return `<b>[${text}]</b>`;
+                } else if (searchTerm && s.name.includes(searchTerm) && idx > bus.namjuIndex) {
+                    // 버스 번호 검색이 아닐 경우에만 도착지 강조
+                    if (!bus.busNo.includes(searchTerm)) {
+                        return `<span class="highlight-dest">${text}</span>`;
+                    }
+                }
+                return text;
             }).join(' → ');
 
-            // 남은 시간 텍스트 (내일이면 "내일 00:00 출발" 표시)
             let remainText = '';
             let spanClass = 'remain-time';
 
             if (bus.isTomorrow) {
                 remainText = `내일 ${bus.namjuTime} 출발 예정`;
-                spanClass = 'tomorrow-time'; // 주황색 클래스 적용
+                spanClass = 'tomorrow-time'; 
             } else {
                 const m = Math.floor(bus.diff);
                 if (m === 0) remainText = '곧 도착';
@@ -603,26 +609,19 @@
     }
 
     function getUpcomingBuses(searchTerm = '') {
-        // 실시간 차이(diff)와 내일 여부(isTomorrow) 업데이트
         let upcoming = parsedBuses.map(bus => {
             const timeInfo = getBusTimeInfo(bus.namjuTime);
             return { ...bus, diff: timeInfo.diff, isTomorrow: timeInfo.isTomorrow };
         });
 
         if (searchTerm) {
-            const actualSearchTerm = aliases[searchTerm] || searchTerm;
-            
             upcoming = upcoming.filter(bus => {
-                // 버스 번호로 검색하거나
-                if (bus.busNo.includes(actualSearchTerm)) return true;
-                
-                // 남주고 '이후'의 정류장 목록 중에 검색어가 포함되어 있는지 확인
+                if (bus.busNo.includes(searchTerm)) return true;
                 const stopsAfterNamju = bus.stops.slice(bus.namjuIndex + 1);
-                return stopsAfterNamju.some(s => s.name.includes(actualSearchTerm));
+                return stopsAfterNamju.some(s => s.name.includes(searchTerm));
             });
         }
 
-        // 남은 시간(diff) 기준으로 정렬 후 5개 표시
         upcoming.sort((a, b) => a.diff - b.diff);
         return upcoming.slice(0, 5);
     }
@@ -630,7 +629,7 @@
     function showUpcomingBuses() {
         document.getElementById('sectionTitle').innerText = '가장 빨리 오는 버스';
         const buses = getUpcomingBuses();
-        renderBuses(buses);
+        renderBuses(buses, ''); // 기본 화면은 검색어 없이 렌더링
     }
 
     function resetAndShowUpcoming() {
@@ -646,22 +645,23 @@
         }
         
         document.getElementById('sectionTitle').innerText = `'${input}'(으)로 가는 가장 빨리 오는 버스`;
-        const buses = getUpcomingBuses(input);
-        renderBuses(buses);
+        
+        const actualSearchTerm = aliases[input] || input;
+        const buses = getUpcomingBuses(actualSearchTerm);
+        renderBuses(buses, actualSearchTerm); // 검색어를 같이 넘겨줘서 주황색 처리!
     }
 
-    // 데이터 초기화 및 첫 화면 렌더링
     initData();
     showUpcomingBuses();
 
-    // 1분마다 자동 새로고침하여 시간 갱신
     setInterval(() => {
         const input = document.getElementById('destination').value.trim();
         if (!input) {
             showUpcomingBuses();
         } else {
-            const buses = getUpcomingBuses(input);
-            renderBuses(buses);
+            const actualSearchTerm = aliases[input] || input;
+            const buses = getUpcomingBuses(actualSearchTerm);
+            renderBuses(buses, actualSearchTerm);
         }
     }, 60000);
 
