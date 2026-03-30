@@ -125,7 +125,10 @@
             font-size: 0.85rem;
             color: #7f8c8d;
             margin-top: 10px;
-            white-space: nowrap;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -135,6 +138,7 @@
             padding: 20px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
+            line-height: 1.5;
         }
         .footer {
             margin-top: 40px;
@@ -155,21 +159,21 @@
 <body>
 
 <div class="container">
-    <div class="header-group" onclick="showUpcomingBuses()">
+    <div class="header-group" onclick="resetAndShowUpcoming()">
         <div class="logo-container">
-            <img src="image.png" alt="남주고등학교 로고" onerror="this.src='https://via.placeholder.com/120x120?text=Logo+Error'">
+            <img src="Image.png" alt="남주고등학교 로고" onerror="this.src='https://via.placeholder.com/120x120?text=Logo'">
         </div>
         <h1>남주GO!</h1>
     </div>
     
-    <p class="subtitle">목적지를 입력하면 가장 빠른 버스를 찾아드려요</p>
+    <p class="subtitle">목적지나 버스 번호를 입력하면 가장 빠른 버스를 찾아드려요</p>
     
     <div class="search-box">
-        <input type="text" id="destination" placeholder="예: 중앙로, 오일장, 터미널" onkeypress="if(event.key === 'Enter') searchBus()">
+        <input type="text" id="destination" placeholder="예: 중앙로, 오일장, 615" onkeypress="if(event.key === 'Enter') searchBus()">
         <button onclick="searchBus()">검색</button>
     </div>
 
-    <div id="sectionTitle" class="section-title">가장 빨리 오는 남주고 출발 버스 5대</div>
+    <div id="sectionTitle" class="section-title">가장 빨리 오는 버스</div>
 
     <div id="resultList" class="result-container">
         </div>
@@ -180,6 +184,7 @@
 </div>
 
 <script>
+    // 버스 시간표 데이터 
     const rawData = `
 510번(6:26 출발)
 남주고 6:26 중앙로터리 6:35 서귀포여자고등학교 6:47 서귀포버스터미널 6:54 대천동주민센터 7:00 중문우체국 7:12 제주 국제컨벤션센터 7:46
@@ -259,434 +264,185 @@
 615번(7:10 출발)
 하례2리입구 07:10 서귀포농업기술센터 07:16 토평초교 07:21 서귀포향토오일시장 07:25 남주중고등학교 07:32 중앙로터리(서) 07:42 뉴경남호텔 07:46 외돌개 07:51
 
-615번(7:30 출발)
-하례2리입구 07:30 서귀포농업기술센터 07:36 토평초교 07:41 서귀포향토오일시장 07:45 남주중고등학교 07:52 중앙로터리(서) 08:02 뉴경남호텔 08:06 외돌개 08:11
-
-615번(8:15 출발)
-하례2리입구 08:15 서귀포농업기술센터 08:21 토평초교 08:26 서귀포향토오일시장 08:30 남주중고등학교 08:34 중앙로터리(서) 08:40 뉴경남호텔 08:44 외돌개 08:49
-
-615번(9:30 출발)
-하례2리입구 09:30 서귀포농업기술센터 09:36 토평초교 09:41 서귀포향토오일시장 09:45 남주중고등학교 09:49 중앙로터리(서) 09:55 뉴경남호텔 09:59 외돌개 10:04
-
-615번(10:40 출발)
-하례2리입구 10:40 서귀포농업기술센터 10:46 토평초교 10:51 서귀포향토오일시장 10:55 남주중고등학교 10:59 중앙로터리(서) 11:05 뉴경남호텔 11:09 외돌개 11:14
-
-615번(12:00 출발)
-하례2리입구 12:00 서귀포농업기술센터 12:06 토평초교 12:11 서귀포향토오일시장 12:15 남주중고등학교 12:19 중앙로터리(서) 12:25 뉴경남호텔 12:29 외돌개 12:34
-
-615번(13:30 출발)
-하례2리입구 13:30 서귀포농업기술센터 13:36 토평초교 13:41 서귀포향토오일시장 13:45 남주중고등학교 13:49 중앙로터리(서) 13:55 뉴경남호텔 13:59 외돌개 14:04
-
-615번(14:40 출발)
-하례2리입구 14:40 서귀포농업기술센터 14:46 토평초교 14:51 서귀포향토오일시장 14:55 남주중고등학교 14:59 중앙로터리(서) 15:05 뉴경남호텔 15:09 외돌개 15:14
-
-615번(15:50 출발)
-하례2리입구 15:50 서귀포농업기술센터 15:56 토평초교 16:01 서귀포향토오일시장 16:05 남주중고등학교 16:09 중앙로터리(서) 16:15 뉴경남호텔 16:19 외돌개 16:24
-
-615번(16:20 출발)
-하례2리입구 16:20 서귀포농업기술센터 16:26 토평초교 16:31 서귀포향토오일시장 16:35 남주중고등학교 16:39 중앙로터리(서) 16:45 뉴경남호텔 16:49 외돌개 16:54
-
-615번(17:10 출발)
-하례2리입구 17:10 서귀포농업기술센터 17:16 토평초교 17:21 서귀포향토오일시장 17:25 남주중고등학교 17:29 중앙로터리(서) 17:35 뉴경남호텔 17:39 외돌개 17:44
-
-615번(18:20 출발)
-하례2리입구 18:20 서귀포농업기술센터 18:26 토평초교 18:31 서귀포향토오일시장 18:35 남주중고등학교 18:39 중앙로터리(서) 18:45 뉴경남호텔 18:49 외돌개 18:54
-
-615번(19:40 출발)
-하례2리입구 19:40 서귀포농업기술센터 19:46 토평초교 19:51 서귀포향토오일시장 19:55 남주중고등학교 19:59 중앙로터리(서) 20:05 뉴경남호텔 20:09 외돌개 20:14
-
-615번(21:00 출발)
-하례2리입구 21:00 서귀포농업기술센터 21:06 토평초교 21:11 서귀포향토오일시장 21:15 남주중고등학교 21:19 중앙로터리(서) 21:25 뉴경남호텔 21:29 외돌개 21:34
-
-621번(6:45 출발)
-하례리입구 6:45 신례초등학교 6:53 효돈중학교 7:03 서귀포향토오일시장 7:13 남주고등학교 7:17 제주은행 7:33 오일시장 7:37 효돈중학교 8:02 신례초등학교 8:12 하례리입구 8:20
-
-621번(7:50 출발)
-하례리입구 7:50 신례초등학교 8:00 효돈중학교 8:10 서귀포향토오일시장 8:00 남주고등학교 8:24 제주은행 8:40 오일시장 8:53 효돈중학교 9:09 신례초등학교 9:19 하례리입구 9:29
-
-625번(06:53 출발)
-토평 06:53 오일장 06:56 동문로터리 07:07 중앙로터리(동) 07:10 남주고 07:23 헬스케어타운 07:28
-
-625번(07:10 출발)
-토평 07:10 오일장 07:13 동문로터리 07:24 중앙로터리(동) 07:27 남주고 07:40 헬스케어타운 07:45
-
-625번(07:43 출발)
-토평 07:43 오일장 07:46 동문로터리 07:57 중앙로터리(동) 08:00 남주고 08:13 헬스케어타운 08:18
-
-625번(07:45 출발)
-헬스케어타운 07:45 중앙로터리(서) 08:01 동문로터리 08:04 남주고 08:19 오일장 08:24 토평 08:29
-
-625번(14:53 출발)
-치유의 숲 14:53 헬스케어타운 15:00 남주고 15:05 중앙로터리(서) 15:16 동문로터리 15:19 오일장 15:30 토평 15:35
-
-625번(16:15 출발)
-헬스케어타운 16:15 남주고 16:20 중앙로터리(서) 16:31 동문로터리 16:34 오일장 16:45 토평 16:50
-
-625번(18:00 출발)
-헬스케어타운 18:00 남주고 18:05 중앙로터리(서) 18:16 동문로터리 18:19 오일장 18:30 토평 18:35
-
-625번(21:08 출발)
-헬스케어타운 21:08 남주고 21:13 중앙로터리(서) 21:24 동문로터리 21:27 오일장 21:38 토평 21:43
-
-630번(07:17 출발)
-토평 07:17 서귀포오일장 07:21 남주고 07:27 중앙로터리(서) 07:39 주공3,4단지 07:47 보목포구 08:00
-
-630번(07:55 출발)
-토평 07:55 서귀포오일장 07:59 남주고 08:05 중앙로터리(서) 08:17 주공3,4단지 08:25 보목포구 08:38
-
-630번(16:36 출발)
-토평 16:36 서귀포오일장 16:40 남주고 16:46 중앙로터리(서) 16:58 주공3,4단지 17:06 보목포구 17:19
-
-630번(17:55 출발)
-토평 17:55 서귀포오일장 17:59 남주고 18:05 중앙로터리(서) 18:17 주공3,4단지 18:25 보목포구 18:38
-
-630번(20:43 출발)
-토평 20:43 서귀포오일장 20:47 남주고 20:53 중앙로터리(서) 21:05 주공3,4단지 21:13 보목포구 21:26
-
-630번(06:40 출발)
-보목포구 06:40 삼성여고 06:48 주공3/4단지 06:53 중앙로터리(동) 07:01 남주고 07:13 서귀포향토오일시장 07:19 토평초등학교 07:24
-
-630번(07:16 출발)
-보목포구 07:16 삼성여고 07:24 주공3/4단지 07:29 중앙로터리(동) 07:37 남주고 07:49 서귀포향토오일시장 07:55 토평초등학교 08:00
-
-630번(08:00 출발)
-보목포구 08:00 삼성여고 08:08 주공3/4단지 08:13 중앙로터리(동) 08:21 남주고 08:33 서귀포향토오일시장 08:39 토평초등학교 08:44
-
-635번(07:10 출발)
-토평 07:10 오일시장 07:15 중앙로터리(서) 07:28 남군농협 07:32 남주고 07:46
-
-635번(07:55 출발)
-토평 07:55 오일시장 08:00 서귀포여중 08:16 중앙로터리(서) 08:22 남군농협 08:26 남주고 08:40
-
-635번(09:15 출발)
-토평 09:15 오일시장 09:20 중앙로터리(서) 09:35 남군농협 09:39 남주고 09:53
-
-635번(10:10 출발)
-토평 10:10 오일시장 10:15 중앙로터리(서) 10:30 남군농협 10:34 남주고 10:48
-
-635번(11:30 출발)
-토평 11:30 오일시장 11:35 중앙로터리(서) 11:50 남군농협 11:54 남주고 12:08
-
-635번(12:40 출발)
-토평 12:40 오일시장 12:45 중앙로터리(서) 13:00 남군농협 13:04 남주고 13:18
-
-635번(14:20 출발)
-토평 14:20 오일시장 14:25 중앙로터리(서) 14:40 남군농협 14:44 남주고 14:58
-
-635번(15:15 출발)
-토평 15:15 오일시장 15:20 서귀포여중 15:36 중앙로터리(서) 15:42 남군농협 15:46 남주고 16:00
-
-635번(16:15 출발)
-토평 16:15 오일시장 16:20 서귀포여중 16:36 중앙로터리(서) 16:42 남군농협 16:46 남주고 17:00
-
-635번(17:15 출발)
-토평 17:15 오일시장 17:20 중앙로터리(서) 17:35 남군농협 17:39 남주고 17:53
-
-635번(18:05 출발)
-토평 18:05 오일시장 18:10 중앙로터리(서) 18:25 남군농협 18:29 남주고 18:43
-
-635번(19:05 출발)
-토평 19:05 오일시장 19:10 중앙로터리(서) 19:25 남군농협 19:29 남주고 19:43
-
-635번(19:55 출발)
-토평 19:55 오일시장 20:00 중앙로터리(서) 20:15 남군농협 20:19 남주고 20:33
-
-635번(20:55 출발)
-토평 20:55 오일시장 21:00 중앙로터리(서) 21:15 남군농협 21:19 남주고 21:33
-
-635번(06:40 출발)
-남주고 06:40 제주은행 06:53 서귀포등기소 06:58 오일시장 07:13 토평 07:18
-
-635번(07:50 출발)
-남주고 07:50 제주은행 08:03 서귀포등기소 08:08 서귀포여중 08:12 오일시장 08:30 토평 08:35
-
-635번(08:40 출발)
-남주고 08:40 제주은행 08:53 서귀포등기소 08:58 오일시장 09:13 토평 09:18
-
-635번(09:53 출발)
-남주고 09:53 제주은행 10:06 서귀포등기소 10:11 오일시장 10:26 토평 10:31
-
-635번(10:48 출발)
-남주고 10:48 제주은행 11:01 서귀포등기소 11:06 오일시장 11:21 토평 11:26
-
-635번(12:08 출발)
-남주고 12:08 제주은행 12:21 서귀포등기소 12:26 오일시장 12:41 토평 12:46
-
-635번(13:18 출발)
-남주고 13:18 제주은행 13:31 서귀포등기소 13:36 오일시장 13:51 토평 13:56
-
-635번(15:03 출발)
-남주고 15:03 제주은행 15:16 서귀포등기소 15:21 서귀포여중 15:25 오일시장 15:36 토평 15:41
-
-635번(16:03 출발)
-남주고 16:03 제주은행 16:16 서귀포등기소 16:21 서귀포여중 16:25 오일시장 16:36 토평 16:41
-
-635번(17:00 출발)
-남주고 17:00 제주은행 17:13 서귀포등기소 17:18 오일시장 17:33 토평 17:38
-
-635번(17:53 출발)
-남주고 17:53 제주은행 18:06 서귀포등기소 18:11 오일시장 18:26 토평 18:31
-
-635번(18:43 출발)
-남주고 18:43 제주은행 18:56 서귀포등기소 19:01 오일시장 19:19 토평 19:24
-
-635번(19:43 출발)
-남주고 19:43 제주은행 19:56 서귀포등기소 20:01 오일시장 20:16 토평 20:21
-
-635번(20:33 출발)
-남주고 20:33 제주은행 20:46 서귀포등기소 20:51 오일시장 21:06 토평 21:11
-
-635번(21:33 출발)
-남주고 21:33 제주은행 21:46 서귀포등기소 21:51 오일시장 22:06 토평 22:11
-
-655번(07:00 출발)
-공천포 07:00 토평초교 07:15 오일시장 07:19 남주고 07:22 중앙로터리(동) 07:31 공무원연금공단 07:49 시청2청사 07:51 회수 08:03 천제연 08:11
-
-655번(16:40 출발)
-공천포 16:40 토평초교 16:55 오일시장 16:59 남주고 17:02 중앙로터리(동) 17:11 공무원연금공단 17:29 시청2청사 17:31 회수 17:43 천제연 17:51
-
-655번(18:45 출발)
-공천포 18:45 토평초교 19:00 오일시장 19:04 남주고 19:07 중앙로터리(동) 19:16 공무원연금공단 19:34 시청2청사 19:36 회수 19:48 천제연 19:56
-
-655번(06:57 출발)
-천제연 06:57 회수 07:05 시청2청사 07:17 공무원연금공단 07:19 중앙로터리(서) 07:37 남주고 07:46 오일시장 07:49 토평초교 07:53 공천포 08:08
-
-655번(15:50 출발)
-천제연 15:50 회수 15:58 시청2청사 16:10 공무원연금공단 16:12 중앙로터리(서) 16:30 남주고 16:39 오일시장 16:42 토평초교 16:46 공천포 17:01
-
-655번(17:50 출발)
-천제연 17:50 회수 17:58 시청2청사 18:10 공무원연금공단 18:12 중앙로터리(서) 18:30 남주고 18:39 오일시장 18:42 토평초교 18:46 공천포 19:01
-    `;
-
-    // 💡 버스 정류장 동의어(유의어) 그룹 사전 추가
-    // 이 배열에 묶인 단어들은 모두 "같은 정류장"으로 취급됩니다.
-    const searchAliases = [
-        ["오일장", "오일시장", "서귀포향토오일시장", "서귀포오일장", "향토오일시장"],
-        ["중앙로터리", "중앙로타리", "중앙로터리(서)", "중앙로터리(동)", "구터미널", "중앙로"],
-        ["토평초", "토평초교", "토평초등학교"],
-        ["삼성여고", "삼성여자고등학교"],
-        ["서귀여고", "서귀포여자고등학교", "서귀여"],
-        ["서귀여중", "서귀포여중", "서귀포여자중학교"],
-        ["버스터미널", "서귀포버스터미널", "신터미널", "이마트", "월드컵경기장"],
-        ["주공3,4단지", "주공3/4단지", "주공34단지", "주공아파트"],
-        ["남원읍", "남원읍사무소"],
-        ["컨벤션", "컨벤션센터", "제주국제컨벤션센터", "제주 국제컨벤션센터", "icc"],
-        ["동문로터리", "동문로타리"]
-    ];
-
-    // 데이터 파싱
-    const buses = [];
-    const blocks = rawData.trim().split(/\n\s*\n/);
-    
-    blocks.forEach(block => {
-        const lines = block.trim().split('\n');
-        if(lines.length < 2) return;
+625번(6:53 출발)
+남주고 6:53 서귀포여중 6:58 오일시장 7:06 헬스케어타운 7:15
+
+625번(7:10 출발)
+남주고 7:10 서귀포여중 7:15 오일시장 7:23 헬스케어타운 7:32
+
+625번(7:43 출발)
+남주고 7:43 서귀포여중 7:48 오일시장 7:56 헬스케어타운 8:05
+
+625번(12:55 출발)
+헬스케어타운 12:55 오일시장 13:06 서귀포여중 13:14 남주고 13:20
+
+625번(16:55 출발)
+헬스케어타운 16:55 오일시장 17:06 서귀포여중 17:14 남주고 17:20
+`;
+
+    const parsedBuses = [];
+
+    // 동의어 처리 사전 (헬스케어타운 검색 개선)
+    const aliases = {
+        "헬스케어": "헬스케어타운",
+        "헬스": "헬스케어타운",
+        "오일장": "서귀포향토오일시장",
+        "중앙로": "중앙로터리",
+        "컨벤션": "제주국제컨벤션센터"
+    };
+
+    function parseRouteString(routeStr) {
+        const tokens = routeStr.trim().split(/\s+/);
+        const stops = [];
+        let currentName = [];
         
-        const busNumber = lines[0].split('(')[0].trim();
-        const routeText = lines.slice(1).join(' ');
-        
-        const parts = routeText.split(/(\d{1,2}:\d{2})/);
-        const route = [];
-        
-        for(let i = 0; i < parts.length - 1; i += 2) {
-            const stopName = parts[i].trim();
-            const stopTime = parts[i+1];
-            if(stopName) route.push({ stop: stopName, time: stopTime });
-        }
-
-        const namjuIndex = route.findIndex(r => r.stop.includes('남주'));
-        
-        if(namjuIndex !== -1) {
-            buses.push({
-                busNumber: busNumber,
-                namjuTime: route[namjuIndex].time,
-                route: route,
-                namjuIndex: namjuIndex
-            });
-        }
-    });
-
-    let activeResults = [];
-    let timerInterval = null;
-    let isDefaultView = true;
-
-    function getCurrentMinutes() {
-        const now = new Date();
-        return now.getHours() * 60 + now.getMinutes();
-    }
-
-    function formatRemainTimeText(minutes) {
-        if (minutes === 0) return "곧 도착/출발";
-        if (minutes < 60) return `${minutes}분 뒤`;
-        const hours = Math.floor(minutes / 60);
-        const remainMins = minutes % 60;
-        return remainMins === 0 ? `${hours}시간 뒤` : `${hours}시간 ${remainMins}분 뒤`;
-    }
-
-    function getRouteString(routeArray, startIndex, endIndex) {
-        const stops = routeArray.slice(startIndex, endIndex + 1).map(r => r.stop);
-        if(stops.length > 3) {
-            return `${stops[0]} ➔ ... ➔ ${stops[stops.length-1]}`;
-        }
-        return stops.join(' ➔ ');
-    }
-
-    // 💡 검색어와 버스정류장 이름이 일치하는지 영리하게 검사하는 함수
-    function isStopMatch(stopName, searchInput) {
-        // 공백(띄어쓰기)을 모두 없애서 비교
-        const cleanStop = stopName.replace(/\s+/g, '');
-        const cleanInput = searchInput.replace(/\s+/g, '');
-        
-        // 1. 단순 포함 여부 (예: '중앙로터리' 검색 -> '중앙로터리(서)' 매칭)
-        if (cleanStop.includes(cleanInput)) return true;
-
-        // 2. 동의어(유의어) 사전 확인
-        for (const group of searchAliases) {
-            // 사용자가 입력한 검색어가 그룹 안에 속하는 단어인지 확인
-            const isInputInGroup = group.some(alias => 
-                alias.replace(/\s+/g, '').includes(cleanInput) || cleanInput.includes(alias.replace(/\s+/g, ''))
-            );
-            
-            // 만약 속한다면, 실제 정류장 이름(데이터)도 그 그룹에 속하는지 확인
-            if (isInputInGroup) {
-                const isStopInGroup = group.some(alias => cleanStop.includes(alias.replace(/\s+/g, '')));
-                if (isStopInGroup) return true;
+        for (let token of tokens) {
+            if (/^\d{1,2}:\d{2}$/.test(token)) {
+                stops.push({ name: currentName.join(' '), time: token });
+                currentName = [];
+            } else {
+                currentName.push(token);
             }
         }
-        return false;
+        return stops;
     }
 
-    function showUpcomingBuses() {
-        document.getElementById('destination').value = '';
-        isDefaultView = true;
-        document.getElementById('sectionTitle').innerText = "가장 빨리 오는 남주고 출발 버스 5대";
-        
-        const currentMinutes = getCurrentMinutes();
-        let allFutureBuses = [];
-
-        buses.forEach(bus => {
-            if (bus.namjuIndex >= bus.route.length - 1) return;
-
-            const timeParts = bus.namjuTime.split(':');
-            const busDepMinutes = parseInt(timeParts[0], 10) * 60 + parseInt(timeParts[1], 10);
-            const adjustedDepMinutes = busDepMinutes < 240 ? busDepMinutes + 1440 : busDepMinutes;
-            const adjustedCurrent = currentMinutes < 240 ? currentMinutes + 1440 : currentMinutes;
-
-            const remainMinutes = adjustedDepMinutes - adjustedCurrent;
+    function initData() {
+        const blocks = rawData.trim().split(/\n\s*\n/);
+        blocks.forEach(block => {
+            const lines = block.split('\n');
+            if (lines.length < 2) return;
             
-            if (remainMinutes >= 0) {
-                allFutureBuses.push({
-                    busNumber: bus.busNumber,
-                    namjuTime: bus.namjuTime,
-                    destName: bus.route[bus.route.length - 1].stop,
-                    destTime: bus.route[bus.route.length - 1].time,
-                    depMinutes: adjustedDepMinutes,
-                    routeString: getRouteString(bus.route, bus.namjuIndex, bus.route.length - 1)
+            const titleMatch = lines[0].match(/(.+)\((.+)\s*출발\)/);
+            if (!titleMatch) return;
+            
+            const busNo = titleMatch[1].trim();
+            const routeStr = lines[1].trim();
+            const stops = parseRouteString(routeStr);
+            
+            const namjuIndex = stops.findIndex(s => s.name.includes('남주고') || s.name.includes('남주중고'));
+            
+            if (namjuIndex !== -1) {
+                parsedBuses.push({
+                    busNo: busNo,
+                    routeStr: routeStr,
+                    stops: stops,
+                    namjuTime: stops[namjuIndex].time,
+                    namjuIndex: namjuIndex
                 });
             }
         });
-
-        allFutureBuses.sort((a, b) => a.depMinutes - b.depMinutes);
-        activeResults = allFutureBuses.slice(0, 5);
-
-        renderResults();
-        startAutoRefresh();
     }
 
-    function searchBus(autoRefreshed = false) {
-        const destination = document.getElementById('destination').value.trim();
-        if(!destination) {
-            if(!autoRefreshed) alert("목적지를 입력해주세요!");
-            return;
+    function getMinutesDiff(timeStr) {
+        const now = new Date();
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        
+        const busTime = new Date();
+        busTime.setHours(hours, minutes, 0, 0);
+        
+        // 만약 버스 시간이 현재보다 이전인데, 00시 근처라면 (예: 00:13) 다음날로 간주
+        if (hours < 3 && now.getHours() > 18) {
+            busTime.setDate(busTime.getDate() + 1);
         }
 
-        isDefaultView = false;
-        document.getElementById('sectionTitle').innerText = `'${destination}' 방면 결과 (시간순)`;
-        const currentMinutes = getCurrentMinutes();
-        activeResults = [];
-
-        buses.forEach(bus => {
-            // 💡 여기서 isStopMatch 함수를 사용하여 융통성 있게 정류장을 찾습니다!
-            const destIndex = bus.route.findIndex((r, idx) => idx > bus.namjuIndex && isStopMatch(r.stop, destination));
-            
-            if (destIndex !== -1) {
-                const timeParts = bus.namjuTime.split(':');
-                const busDepMinutes = parseInt(timeParts[0], 10) * 60 + parseInt(timeParts[1], 10);
-                const adjustedDepMinutes = busDepMinutes < 240 ? busDepMinutes + 1440 : busDepMinutes;
-                const adjustedCurrent = currentMinutes < 240 ? currentMinutes + 1440 : currentMinutes;
-
-                const remainMinutes = adjustedDepMinutes - adjustedCurrent;
-
-                if (remainMinutes >= 0) {
-                    activeResults.push({
-                        busNumber: bus.busNumber,
-                        namjuTime: bus.namjuTime,
-                        destName: bus.route[destIndex].stop,
-                        destTime: bus.route[destIndex].time,
-                        depMinutes: adjustedDepMinutes,
-                        routeString: getRouteString(bus.route, bus.namjuIndex, destIndex)
-                    });
-                }
-            }
-        });
-
-        activeResults.sort((a, b) => a.depMinutes - b.depMinutes);
-        renderResults();
-        startAutoRefresh();
+        const diff = (busTime - now) / (1000 * 60);
+        return diff;
     }
 
-    function renderResults() {
+    function formatTimeLeft(minutes) {
+        const m = Math.floor(minutes);
+        if (m === 0) return '곧 도착';
+        if (m < 0) return '출발함';
+        if (m > 60) {
+            const h = Math.floor(m / 60);
+            const remainM = m % 60;
+            return remainM > 0 ? `${h}시간 ${remainM}분 후` : `${h}시간 후`;
+        }
+        return `${m}분 후`;
+    }
+
+    function renderBuses(buses) {
         const container = document.getElementById('resultList');
         container.innerHTML = '';
 
-        if(activeResults.length === 0) {
-            container.innerHTML = `<div class="no-result">해당 조건에 맞는 버스가 없거나,<br>오늘 남은 버스가 없습니다.</div>`;
+        if (buses.length === 0) {
+            // 요청하신 결과 없음 문구로 변경 완료
+            container.innerHTML = '<div class="no-result">버스가 오늘 더이상 오지 않거나,<br>남주고에서 바로 갈수 없는 장소에요.</div>';
             return;
         }
 
-        const currentMinutes = getCurrentMinutes();
-        const adjustedCurrent = currentMinutes < 240 ? currentMinutes + 1440 : currentMinutes;
+        buses.forEach(bus => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            
+            const fullRoute = bus.stops.map((s, idx) => {
+                if(idx === bus.namjuIndex) return `<b>[${s.name} ${s.time}]</b>`;
+                return `${s.name} ${s.time}`;
+            }).join(' → ');
 
-        activeResults.forEach(result => {
-            let remainMinutes = result.depMinutes - adjustedCurrent;
-            if(remainMinutes < 0) return; 
-
-            let remainText = formatRemainTimeText(remainMinutes);
-
-            const destInfoHTML = isDefaultView 
-                ? `<span>종점(${result.destName}) 도착: <strong>${result.destTime}</strong></span>`
-                : `<span>${result.destName} 도착: <strong>${result.destTime}</strong></span>`;
-
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="bus-title">${result.busNumber}</div>
+            div.innerHTML = `
+                <div class="bus-title">${bus.busNo}</div>
                 <div class="time-info">
-                    <span>남주고 출발: <strong>${result.namjuTime}</strong></span>
-                    <span class="remain-time">${remainText}</span>
+                    <span>남주고 출발: ${bus.namjuTime}</span>
+                    <span class="remain-time">${formatTimeLeft(bus.diff)}</span>
                 </div>
-                <div class="time-info" style="color:#555; font-size:0.9rem;">
-                    ${destInfoHTML}
-                </div>
-                <div class="route-info">${result.routeString}</div>
+                <div class="route-info">${fullRoute}</div>
             `;
-            container.appendChild(card);
+            container.appendChild(div);
         });
     }
 
-    function startAutoRefresh() {
-        if(timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            if (isDefaultView) {
-                showUpcomingBuses(); 
-            } else {
-                searchBus(true); 
-            }
-        }, 60000);
+    function getUpcomingBuses(searchTerm = '') {
+        let upcoming = parsedBuses.map(bus => {
+            return { ...bus, diff: getMinutesDiff(bus.namjuTime) };
+        }).filter(bus => bus.diff >= 0); // 아직 안 지나간 버스만
+
+        if (searchTerm) {
+            const actualSearchTerm = aliases[searchTerm] || searchTerm;
+            
+            upcoming = upcoming.filter(bus => {
+                // 버스 번호로 검색하거나
+                if (bus.busNo.includes(actualSearchTerm)) return true;
+                
+                // 남주고 '이후'의 정류장 목록 중에 검색어가 포함되어 있는지 확인
+                const stopsAfterNamju = bus.stops.slice(bus.namjuIndex + 1);
+                return stopsAfterNamju.some(s => s.name.includes(actualSearchTerm));
+            });
+        }
+
+        upcoming.sort((a, b) => a.diff - b.diff);
+        return upcoming.slice(0, 5); // 5개만 표시
     }
 
-    window.onload = showUpcomingBuses;
+    function showUpcomingBuses() {
+        document.getElementById('sectionTitle').innerText = '가장 빨리 오는 버스';
+        const buses = getUpcomingBuses();
+        renderBuses(buses);
+    }
 
+    function resetAndShowUpcoming() {
+        document.getElementById('destination').value = '';
+        showUpcomingBuses();
+    }
+
+    function searchBus() {
+        const input = document.getElementById('destination').value.trim();
+        if (!input) {
+            showUpcomingBuses();
+            return;
+        }
+        
+        // 요청하신 검색 시 제목으로 변경 완료
+        document.getElementById('sectionTitle').innerText = `'${input}'(으)로 가는 가장 빨리 오는 버스`;
+        const buses = getUpcomingBuses(input);
+        renderBuses(buses);
+    }
+
+    // 초기화 및 첫 화면 렌더링
+    initData();
+    showUpcomingBuses();
 </script>
+
 </body>
 </html>
