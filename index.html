@@ -165,7 +165,7 @@
     <p class="subtitle">목적지를 입력하면 가장 빠른 버스를 찾아드려요</p>
     
     <div class="search-box">
-        <input type="text" id="destination" placeholder="예: 중앙로터리, 오일장" onkeypress="if(event.key === 'Enter') searchBus()">
+        <input type="text" id="destination" placeholder="예: 중앙로, 오일장, 터미널" onkeypress="if(event.key === 'Enter') searchBus()">
         <button onclick="searchBus()">검색</button>
     </div>
 
@@ -180,7 +180,6 @@
 </div>
 
 <script>
-    // 전체 시간표 데이터
     const rawData = `
 510번(6:26 출발)
 남주고 6:26 중앙로터리 6:35 서귀포여자고등학교 6:47 서귀포버스터미널 6:54 대천동주민센터 7:00 중문우체국 7:12 제주 국제컨벤션센터 7:46
@@ -459,6 +458,22 @@
 천제연 17:50 회수 17:58 시청2청사 18:10 공무원연금공단 18:12 중앙로터리(서) 18:30 남주고 18:39 오일시장 18:42 토평초교 18:46 공천포 19:01
     `;
 
+    // 💡 버스 정류장 동의어(유의어) 그룹 사전 추가
+    // 이 배열에 묶인 단어들은 모두 "같은 정류장"으로 취급됩니다.
+    const searchAliases = [
+        ["오일장", "오일시장", "서귀포향토오일시장", "서귀포오일장", "향토오일시장"],
+        ["중앙로터리", "중앙로타리", "중앙로터리(서)", "중앙로터리(동)", "구터미널", "중앙로"],
+        ["토평초", "토평초교", "토평초등학교"],
+        ["삼성여고", "삼성여자고등학교"],
+        ["서귀여고", "서귀포여자고등학교", "서귀여"],
+        ["서귀여중", "서귀포여중", "서귀포여자중학교"],
+        ["버스터미널", "서귀포버스터미널", "신터미널", "이마트", "월드컵경기장"],
+        ["주공3,4단지", "주공3/4단지", "주공34단지", "주공아파트"],
+        ["남원읍", "남원읍사무소"],
+        ["컨벤션", "컨벤션센터", "제주국제컨벤션센터", "제주 국제컨벤션센터", "icc"],
+        ["동문로터리", "동문로타리"]
+    ];
+
     // 데이터 파싱
     const buses = [];
     const blocks = rawData.trim().split(/\n\s*\n/);
@@ -516,7 +531,31 @@
         return stops.join(' ➔ ');
     }
 
-    // 로고 클릭 및 첫 화면 진입 시 무조건 빠른 5대 표시
+    // 💡 검색어와 버스정류장 이름이 일치하는지 영리하게 검사하는 함수
+    function isStopMatch(stopName, searchInput) {
+        // 공백(띄어쓰기)을 모두 없애서 비교
+        const cleanStop = stopName.replace(/\s+/g, '');
+        const cleanInput = searchInput.replace(/\s+/g, '');
+        
+        // 1. 단순 포함 여부 (예: '중앙로터리' 검색 -> '중앙로터리(서)' 매칭)
+        if (cleanStop.includes(cleanInput)) return true;
+
+        // 2. 동의어(유의어) 사전 확인
+        for (const group of searchAliases) {
+            // 사용자가 입력한 검색어가 그룹 안에 속하는 단어인지 확인
+            const isInputInGroup = group.some(alias => 
+                alias.replace(/\s+/g, '').includes(cleanInput) || cleanInput.includes(alias.replace(/\s+/g, ''))
+            );
+            
+            // 만약 속한다면, 실제 정류장 이름(데이터)도 그 그룹에 속하는지 확인
+            if (isInputInGroup) {
+                const isStopInGroup = group.some(alias => cleanStop.includes(alias.replace(/\s+/g, '')));
+                if (isStopInGroup) return true;
+            }
+        }
+        return false;
+    }
+
     function showUpcomingBuses() {
         document.getElementById('destination').value = '';
         isDefaultView = true;
@@ -526,7 +565,6 @@
         let allFutureBuses = [];
 
         buses.forEach(bus => {
-            // 하교용 버스 필터링 (남주고가 종점인 버스는 제외)
             if (bus.namjuIndex >= bus.route.length - 1) return;
 
             const timeParts = bus.namjuTime.split(':');
@@ -536,7 +574,6 @@
 
             const remainMinutes = adjustedDepMinutes - adjustedCurrent;
             
-            // 앞으로 올 버스면 무조건 배열에 담음 (시간 제한 없음)
             if (remainMinutes >= 0) {
                 allFutureBuses.push({
                     busNumber: bus.busNumber,
@@ -549,7 +586,6 @@
             }
         });
 
-        // 시간순 정렬 후 무조건 가장 빠른 상위 5대만 슬라이스
         allFutureBuses.sort((a, b) => a.depMinutes - b.depMinutes);
         activeResults = allFutureBuses.slice(0, 5);
 
@@ -557,7 +593,6 @@
         startAutoRefresh();
     }
 
-    // 검색 기능 함수
     function searchBus(autoRefreshed = false) {
         const destination = document.getElementById('destination').value.trim();
         if(!destination) {
@@ -571,7 +606,8 @@
         activeResults = [];
 
         buses.forEach(bus => {
-            const destIndex = bus.route.findIndex((r, idx) => idx > bus.namjuIndex && r.stop.includes(destination));
+            // 💡 여기서 isStopMatch 함수를 사용하여 융통성 있게 정류장을 찾습니다!
+            const destIndex = bus.route.findIndex((r, idx) => idx > bus.namjuIndex && isStopMatch(r.stop, destination));
             
             if (destIndex !== -1) {
                 const timeParts = bus.namjuTime.split(':');
@@ -599,7 +635,6 @@
         startAutoRefresh();
     }
 
-    // 화면 렌더링 함수
     function renderResults() {
         const container = document.getElementById('resultList');
         container.innerHTML = '';
@@ -639,7 +674,6 @@
         });
     }
 
-    // 1분마다 새로고침하여 다음 버스를 갱신 (지나간 버스는 사라지고 다음 버스가 채워짐)
     function startAutoRefresh() {
         if(timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
