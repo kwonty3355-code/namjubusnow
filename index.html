@@ -124,18 +124,14 @@
         .tomorrow-time {
             font-size: 1.1rem;
             font-weight: bold;
-            color: #f39c12; 
+            color: #2ecc71; /* 주황색에서 초록색으로 변경 */
         }
         .route-info {
             font-size: 0.85rem;
             color: #7f8c8d;
             margin-top: 10px;
             line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            /* 텍스트가 잘리지 않고 전체 경로가 다 보이도록 수정 */
         }
         .highlight-dest {
             color: #f39c12; /* 검색한 목적지를 주황색으로 표시 */
@@ -549,7 +545,6 @@
         return { diff, isTomorrow };
     }
 
-    // 화면 렌더링 (검색어인 searchTerm을 받아서 주황색 처리)
     function renderBuses(buses, searchTerm = '') {
         const container = document.getElementById('resultList');
         container.innerHTML = '';
@@ -563,14 +558,12 @@
             const div = document.createElement('div');
             div.className = 'card';
             
-            // 경로 텍스트 생성 중 남주고는 [굵게], 목적지는 주황색으로 표시
             const fullRoute = bus.stops.map((s, idx) => {
                 let text = `${s.name} ${s.time}`;
                 
                 if (idx === bus.namjuIndex) {
                     return `<b>[${text}]</b>`;
                 } else if (searchTerm && s.name.includes(searchTerm) && idx > bus.namjuIndex) {
-                    // 버스 번호 검색이 아닐 경우에만 도착지 강조
                     if (!bus.busNo.includes(searchTerm)) {
                         return `<span class="highlight-dest">${text}</span>`;
                     }
@@ -629,7 +622,7 @@
     function showUpcomingBuses() {
         document.getElementById('sectionTitle').innerText = '가장 빨리 오는 버스';
         const buses = getUpcomingBuses();
-        renderBuses(buses, ''); // 기본 화면은 검색어 없이 렌더링
+        renderBuses(buses, ''); 
     }
 
     function resetAndShowUpcoming() {
@@ -648,7 +641,7 @@
         
         const actualSearchTerm = aliases[input] || input;
         const buses = getUpcomingBuses(actualSearchTerm);
-        renderBuses(buses, actualSearchTerm); // 검색어를 같이 넘겨줘서 주황색 처리!
+        renderBuses(buses, actualSearchTerm); 
     }
 
     initData();
