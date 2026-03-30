@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>남주GO!</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2; 
+            --bg-color: #0e0f37; 
+            --card-bg: #ffffff;
+            --text-color: #ffffff; 
+        }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            flex: 1;
+        }
+        .header-group {
+            text-align: center;
+            cursor: pointer; 
+            margin-bottom: 5px;
+            padding: 10px;
+            border-radius: 12px;
+            transition: background-color 0.2s;
+        }
+        .header-group:hover {
+            background-color: rgba(255, 255, 255, 0.05); 
+        }
+        .logo-container img {
+            width: 120px; 
+            height: auto;
+            margin-bottom: 5px;
+        }
+        h1 {
+            color: var(--text-color);
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 800;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #b0b3c6;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        button {
+            padding: 12px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #357abd;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #333652;
+            padding-bottom: 5px;
+        }
+        .result-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border-left: 5px solid var(--primary-color);
+            color: #333333; 
+        }
+        .bus-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #0056b3;
+            margin-bottom: 10px;
+        }
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        .remain-time {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        .route-info {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .no-result {
+            text-align: center;
+            color: #b0b3c6;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-bottom: 20px;
+            text-align: center;
+        }
+        .footer a {
+            color: #b0b3c6;
+            text-decoration: underline;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .footer a:hover {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-group" onclick="showUpcomingBuses()">
+        <div class="logo-container">
+            <img src="image.png" alt="남주고등학교 로고" onerror="this.src='https://via.placeholder.com/120x120?text=Logo+Error'">
+        </div>
+        <h1>남주GO!</h1>
+    </div>
+    
+    <p class="subtitle">목적지를 입력하면 가장 빠른 버스를 찾아드려요</p>
+    
+    <div class="search-box">
+        <input type="text" id="destination" placeholder="예: 중앙로터리, 오일장" onkeypress="if(event.key === 'Enter') searchBus()">
+        <button onclick="searchBus()">검색</button>
+    </div>
+
+    <div id="sectionTitle" class="section-title">가장 빨리 오는 남주고 출발 버스 5대</div>
+
+    <div id="resultList" class="result-container">
+        </div>
+</div>
+
+<div class="footer">
+    <a href="https://docs.google.com/forms/d/e/1FAIpQLSeUm0Vv-sc9KTQjkX-GZTxbQU79v8dTN0BCm1RqmN2R5OEKbw/viewform?usp=publish-editor" target="_blank">피드백 보내기</a>
+</div>
+
+<script>
+    // 전체 시간표 데이터
+    const rawData = `
+510번(6:26 출발)
+남주고 6:26 중앙로터리 6:35 서귀포여자고등학교 6:47 서귀포버스터미널 6:54 대천동주민센터 7:00 중문우체국 7:12 제주 국제컨벤션센터 7:46
+
+510번(7:00 출발)
+남원읍사무소 7:00 종보존연구센터 7:11 효돈초등학교 7:26 삼성여자고등학교 7:32 남주고 7:44 중앙로터리 7:56 서귀포여자고등학교 8:08 서귀포버스터미널 8:15 대천동주민센터 8:21 중문우체국 8:33 제주국제컨벤션센터 8:45
+
+531번(6:10 출발)
+대평리 6:10 중문우체국 6:30 버스터미널 6:48 중앙로터리 7:08 남주고 7:20 오일장 7:24 하례리입구 7:39 
+
+531번(6:45 출발)
+대평리 6:45 중문우체국 7:05 버스터미널 7:23 중앙로터리 7:43 남주고 7:55 오일장 7:59 하례리입구 8:13
+
+531번(20:20 출발)
+하례리입구 20:20 오일장 20:31 남주고 20:37 중앙로터리 20:56 버스터미널 21:16 중문우체국 21:36 대평리 21:56
+
+532(7:30분 출발)
+하례리입구 7:30 남주고 7:42 중앙로터리 7:56 법환농협 8:11 중문우체국 8:34 색달 8:41 안덕계곡 8:53 화순 9:00
+
+532(14:50 출발)
+하례리입구 14:50 남주고 15:02 중앙로터리 15:16 법환농협 15:31 중문우체국 15:54 색달 16:01 안덕계곡 16:13 화순 16:20
+
+532(17:55 출발)
+하례리입구 17:55 남주고 18:07 중앙로터리 18:21 법환농협 18:36 중문우체국 18:59 색달 19:06 안덕계곡 19:18 화순 19:25
+
+532(20:45 출발)
+하례리입구 20:45 남주고 20:57 중앙로터리 21:11 법환농협 21:26 중문우체국 21:49 색달 21:56 안덕계곡 22:08 화순 22:15
+
+5001번(23:00 출발)
+남주고 23:00 중앙로터리 23:10 신효 23:23 위미3리 23:36 남원읍사무소 23:41 표선환승정류장 00:13
+
+5004번(23:00 출발)
+남주고 23:00 중앙로터리 23:10 서귀포버스터미널 23:23 서진아파트 23:35 강청초등학교 23:45 주거물 23:55
+
+615번(6:10 출발)
+외돌개 6:10 뉴경남호텔 6:15 중앙로터리 6:19 남주중고등학교 6:25 서귀포향토오일시장 6:29 토평초등학교 6:33 서귀포농업기술센터 6:38 하례2리입구 6:44
+
+615번(7:10 출발)
+외돌개 7:10 뉴경남호텔 7:15 중앙로터리 7:19 남주중고등학교 7:29 서귀포향토오일시장 7:36 토평초등학교 7:40 서귀포농업기술센터 7:45 하례2리입구 7:51
+
+615번(8:20 출발)
+외돌개 8:20 뉴경남호텔 8:25 중앙로터리 8:29 남주중고등학교 8:35 서귀포향토오일시장 8:39 토평초등학교 8:43 서귀포농업기술센터 8:48 하례2리입구 8:54
+
+615번(9:30 출발)
+외돌개 9:30 뉴경남호텔 9:35 중앙로터리 9:39 남주중고등학교 9:45 서귀포향토오일시장 9:49 토평초등학교 9:53 서귀포농업기술센터 9:58 하례2리입구 10:04
+
+615번(10:40 출발)
+외돌개 10:40 뉴경남호텔 10:45 중앙로터리 10:49 남주중고등학교 10:55 서귀포향토오일시장 10:59 토평초등학교 11:03 서귀포농업기술센터 11:08 하례2리입구 11:14
+
+615번(12:00 출발)
+외돌개 12:00 뉴경남호텔 12:05 중앙로터리 12:09 남주중고등학교 12:15 서귀포향토오일시장 12:19 토평초등학교 12:23 서귀포농업기술센터 12:28 하례2리입구 12:34
+
+615번(13:30 출발)
+외돌개 13:30 뉴경남호텔 13:35 중앙로터리 13:39 남주중고등학교 13:45 서귀포향토오일시장 13:49 토평초등학교 13:53 서귀포농업기술센터 13:58 하례2리입구 14:04
+
+615번(14:40 출발)
+외돌개 14:40 뉴경남호텔 14:45 중앙로터리 14:49 남주중고등학교 14:55 서귀포향토오일시장 14:59 토평초등학교 15:03 서귀포농업기술센터 15:08 하례2리입구 15:14
+
+615번(15:50 출발)
+외돌개 15:50 뉴경남호텔 15:55 중앙로터리 15:59 남주중고등학교 16:05 서귀포향토오일시장 16:09 토평초등학교 16:13 서귀포농업기술센터 16:18 하례2리입구 16:24
+
+615번(17:10 출발)
+외돌개 17:10 뉴경남호텔 17:15 중앙로터리 17:19 남주중고등학교 17:25 서귀포향토오일시장 17:29 토평초등학교 17:33 서귀포농업기술센터 17:38 하례2리입구 17:44
+
+615번(18:20 출발)
+외돌개 18:20 뉴경남호텔 18:25 중앙로터리 18:29 남주중고등학교 18:35 서귀포향토오일시장 18:39 토평초등학교 18:43 서귀포농업기술센터 18:48 하례2리입구 18:54
+
+615번(19:40 출발)
+외돌개 19:40 뉴경남호텔 19:45 중앙로터리 19:49 남주중고등학교 19:55 서귀포향토오일시장 19:59 토평초등학교 20:03 서귀포농업기술센터 20:08 하례2리입구 20:14
+
+615번(21:00 출발)
+외돌개 21:00 뉴경남호텔 21:05 중앙로터리 21:09 남주중고등학교 21:15 서귀포향토오일시장 21:19 토평초등학교 21:23 서귀포농업기술센터 21:28 하례2리입구 21:34
+
+615번(6:10 출발)
+하례2리입구 06:10 서귀포농업기술센터 06:16 토평초교 06:21 서귀포향토오일시장 06:25 남주중고등학교 06:29 중앙로터리(서) 06:35 뉴경남호텔 06:39 외돌개 06:44
+
+615번(7:10 출발)
+하례2리입구 07:10 서귀포농업기술센터 07:16 토평초교 07:21 서귀포향토오일시장 07:25 남주중고등학교 07:32 중앙로터리(서) 07:42 뉴경남호텔 07:46 외돌개 07:51
+
+615번(7:30 출발)
+하례2리입구 07:30 서귀포농업기술센터 07:36 토평초교 07:41 서귀포향토오일시장 07:45 남주중고등학교 07:52 중앙로터리(서) 08:02 뉴경남호텔 08:06 외돌개 08:11
+
+615번(8:15 출발)
+하례2리입구 08:15 서귀포농업기술센터 08:21 토평초교 08:26 서귀포향토오일시장 08:30 남주중고등학교 08:34 중앙로터리(서) 08:40 뉴경남호텔 08:44 외돌개 08:49
+
+615번(9:30 출발)
+하례2리입구 09:30 서귀포농업기술센터 09:36 토평초교 09:41 서귀포향토오일시장 09:45 남주중고등학교 09:49 중앙로터리(서) 09:55 뉴경남호텔 09:59 외돌개 10:04
+
+615번(10:40 출발)
+하례2리입구 10:40 서귀포농업기술센터 10:46 토평초교 10:51 서귀포향토오일시장 10:55 남주중고등학교 10:59 중앙로터리(서) 11:05 뉴경남호텔 11:09 외돌개 11:14
+
+615번(12:00 출발)
+하례2리입구 12:00 서귀포농업기술센터 12:06 토평초교 12:11 서귀포향토오일시장 12:15 남주중고등학교 12:19 중앙로터리(서) 12:25 뉴경남호텔 12:29 외돌개 12:34
+
+615번(13:30 출발)
+하례2리입구 13:30 서귀포농업기술센터 13:36 토평초교 13:41 서귀포향토오일시장 13:45 남주중고등학교 13:49 중앙로터리(서) 13:55 뉴경남호텔 13:59 외돌개 14:04
+
+615번(14:40 출발)
+하례2리입구 14:40 서귀포농업기술센터 14:46 토평초교 14:51 서귀포향토오일시장 14:55 남주중고등학교 14:59 중앙로터리(서) 15:05 뉴경남호텔 15:09 외돌개 15:14
+
+615번(15:50 출발)
+하례2리입구 15:50 서귀포농업기술센터 15:56 토평초교 16:01 서귀포향토오일시장 16:05 남주중고등학교 16:09 중앙로터리(서) 16:15 뉴경남호텔 16:19 외돌개 16:24
+
+615번(16:20 출발)
+하례2리입구 16:20 서귀포농업기술센터 16:26 토평초교 16:31 서귀포향토오일시장 16:35 남주중고등학교 16:39 중앙로터리(서) 16:45 뉴경남호텔 16:49 외돌개 16:54
+
+615번(17:10 출발)
+하례2리입구 17:10 서귀포농업기술센터 17:16 토평초교 17:21 서귀포향토오일시장 17:25 남주중고등학교 17:29 중앙로터리(서) 17:35 뉴경남호텔 17:39 외돌개 17:44
+
+615번(18:20 출발)
+하례2리입구 18:20 서귀포농업기술센터 18:26 토평초교 18:31 서귀포향토오일시장 18:35 남주중고등학교 18:39 중앙로터리(서) 18:45 뉴경남호텔 18:49 외돌개 18:54
+
+615번(19:40 출발)
+하례2리입구 19:40 서귀포농업기술센터 19:46 토평초교 19:51 서귀포향토오일시장 19:55 남주중고등학교 19:59 중앙로터리(서) 20:05 뉴경남호텔 20:09 외돌개 20:14
+
+615번(21:00 출발)
+하례2리입구 21:00 서귀포농업기술센터 21:06 토평초교 21:11 서귀포향토오일시장 21:15 남주중고등학교 21:19 중앙로터리(서) 21:25 뉴경남호텔 21:29 외돌개 21:34
+
+621번(6:45 출발)
+하례리입구 6:45 신례초등학교 6:53 효돈중학교 7:03 서귀포향토오일시장 7:13 남주고등학교 7:17 제주은행 7:33 오일시장 7:37 효돈중학교 8:02 신례초등학교 8:12 하례리입구 8:20
+
+621번(7:50 출발)
+하례리입구 7:50 신례초등학교 8:00 효돈중학교 8:10 서귀포향토오일시장 8:00 남주고등학교 8:24 제주은행 8:40 오일시장 8:53 효돈중학교 9:09 신례초등학교 9:19 하례리입구 9:29
+
+625번(06:53 출발)
+토평 06:53 오일장 06:56 동문로터리 07:07 중앙로터리(동) 07:10 남주고 07:23 헬스케어타운 07:28
+
+625번(07:10 출발)
+토평 07:10 오일장 07:13 동문로터리 07:24 중앙로터리(동) 07:27 남주고 07:40 헬스케어타운 07:45
+
+625번(07:43 출발)
+토평 07:43 오일장 07:46 동문로터리 07:57 중앙로터리(동) 08:00 남주고 08:13 헬스케어타운 08:18
+
+625번(07:45 출발)
+헬스케어타운 07:45 중앙로터리(서) 08:01 동문로터리 08:04 남주고 08:19 오일장 08:24 토평 08:29
+
+625번(14:53 출발)
+치유의 숲 14:53 헬스케어타운 15:00 남주고 15:05 중앙로터리(서) 15:16 동문로터리 15:19 오일장 15:30 토평 15:35
+
+625번(16:15 출발)
+헬스케어타운 16:15 남주고 16:20 중앙로터리(서) 16:31 동문로터리 16:34 오일장 16:45 토평 16:50
+
+625번(18:00 출발)
+헬스케어타운 18:00 남주고 18:05 중앙로터리(서) 18:16 동문로터리 18:19 오일장 18:30 토평 18:35
+
+625번(21:08 출발)
+헬스케어타운 21:08 남주고 21:13 중앙로터리(서) 21:24 동문로터리 21:27 오일장 21:38 토평 21:43
+
+630번(07:17 출발)
+토평 07:17 서귀포오일장 07:21 남주고 07:27 중앙로터리(서) 07:39 주공3,4단지 07:47 보목포구 08:00
+
+630번(07:55 출발)
+토평 07:55 서귀포오일장 07:59 남주고 08:05 중앙로터리(서) 08:17 주공3,4단지 08:25 보목포구 08:38
+
+630번(16:36 출발)
+토평 16:36 서귀포오일장 16:40 남주고 16:46 중앙로터리(서) 16:58 주공3,4단지 17:06 보목포구 17:19
+
+630번(17:55 출발)
+토평 17:55 서귀포오일장 17:59 남주고 18:05 중앙로터리(서) 18:17 주공3,4단지 18:25 보목포구 18:38
+
+630번(20:43 출발)
+토평 20:43 서귀포오일장 20:47 남주고 20:53 중앙로터리(서) 21:05 주공3,4단지 21:13 보목포구 21:26
+
+630번(06:40 출발)
+보목포구 06:40 삼성여고 06:48 주공3/4단지 06:53 중앙로터리(동) 07:01 남주고 07:13 서귀포향토오일시장 07:19 토평초등학교 07:24
+
+630번(07:16 출발)
+보목포구 07:16 삼성여고 07:24 주공3/4단지 07:29 중앙로터리(동) 07:37 남주고 07:49 서귀포향토오일시장 07:55 토평초등학교 08:00
+
+630번(08:00 출발)
+보목포구 08:00 삼성여고 08:08 주공3/4단지 08:13 중앙로터리(동) 08:21 남주고 08:33 서귀포향토오일시장 08:39 토평초등학교 08:44
+
+635번(07:10 출발)
+토평 07:10 오일시장 07:15 중앙로터리(서) 07:28 남군농협 07:32 남주고 07:46
+
+635번(07:55 출발)
+토평 07:55 오일시장 08:00 서귀포여중 08:16 중앙로터리(서) 08:22 남군농협 08:26 남주고 08:40
+
+635번(09:15 출발)
+토평 09:15 오일시장 09:20 중앙로터리(서) 09:35 남군농협 09:39 남주고 09:53
+
+635번(10:10 출발)
+토평 10:10 오일시장 10:15 중앙로터리(서) 10:30 남군농협 10:34 남주고 10:48
+
+635번(11:30 출발)
+토평 11:30 오일시장 11:35 중앙로터리(서) 11:50 남군농협 11:54 남주고 12:08
+
+635번(12:40 출발)
+토평 12:40 오일시장 12:45 중앙로터리(서) 13:00 남군농협 13:04 남주고 13:18
+
+635번(14:20 출발)
+토평 14:20 오일시장 14:25 중앙로터리(서) 14:40 남군농협 14:44 남주고 14:58
+
+635번(15:15 출발)
+토평 15:15 오일시장 15:20 서귀포여중 15:36 중앙로터리(서) 15:42 남군농협 15:46 남주고 16:00
+
+635번(16:15 출발)
+토평 16:15 오일시장 16:20 서귀포여중 16:36 중앙로터리(서) 16:42 남군농협 16:46 남주고 17:00
+
+635번(17:15 출발)
+토평 17:15 오일시장 17:20 중앙로터리(서) 17:35 남군농협 17:39 남주고 17:53
+
+635번(18:05 출발)
+토평 18:05 오일시장 18:10 중앙로터리(서) 18:25 남군농협 18:29 남주고 18:43
+
+635번(19:05 출발)
+토평 19:05 오일시장 19:10 중앙로터리(서) 19:25 남군농협 19:29 남주고 19:43
+
+635번(19:55 출발)
+토평 19:55 오일시장 20:00 중앙로터리(서) 20:15 남군농협 20:19 남주고 20:33
+
+635번(20:55 출발)
+토평 20:55 오일시장 21:00 중앙로터리(서) 21:15 남군농협 21:19 남주고 21:33
+
+635번(06:40 출발)
+남주고 06:40 제주은행 06:53 서귀포등기소 06:58 오일시장 07:13 토평 07:18
+
+635번(07:50 출발)
+남주고 07:50 제주은행 08:03 서귀포등기소 08:08 서귀포여중 08:12 오일시장 08:30 토평 08:35
+
+635번(08:40 출발)
+남주고 08:40 제주은행 08:53 서귀포등기소 08:58 오일시장 09:13 토평 09:18
+
+635번(09:53 출발)
+남주고 09:53 제주은행 10:06 서귀포등기소 10:11 오일시장 10:26 토평 10:31
+
+635번(10:48 출발)
+남주고 10:48 제주은행 11:01 서귀포등기소 11:06 오일시장 11:21 토평 11:26
+
+635번(12:08 출발)
+남주고 12:08 제주은행 12:21 서귀포등기소 12:26 오일시장 12:41 토평 12:46
+
+635번(13:18 출발)
+남주고 13:18 제주은행 13:31 서귀포등기소 13:36 오일시장 13:51 토평 13:56
+
+635번(15:03 출발)
+남주고 15:03 제주은행 15:16 서귀포등기소 15:21 서귀포여중 15:25 오일시장 15:36 토평 15:41
+
+635번(16:03 출발)
+남주고 16:03 제주은행 16:16 서귀포등기소 16:21 서귀포여중 16:25 오일시장 16:36 토평 16:41
+
+635번(17:00 출발)
+남주고 17:00 제주은행 17:13 서귀포등기소 17:18 오일시장 17:33 토평 17:38
+
+635번(17:53 출발)
+남주고 17:53 제주은행 18:06 서귀포등기소 18:11 오일시장 18:26 토평 18:31
+
+635번(18:43 출발)
+남주고 18:43 제주은행 18:56 서귀포등기소 19:01 오일시장 19:19 토평 19:24
+
+635번(19:43 출발)
+남주고 19:43 제주은행 19:56 서귀포등기소 20:01 오일시장 20:16 토평 20:21
+
+635번(20:33 출발)
+남주고 20:33 제주은행 20:46 서귀포등기소 20:51 오일시장 21:06 토평 21:11
+
+635번(21:33 출발)
+남주고 21:33 제주은행 21:46 서귀포등기소 21:51 오일시장 22:06 토평 22:11
+
+655번(07:00 출발)
+공천포 07:00 토평초교 07:15 오일시장 07:19 남주고 07:22 중앙로터리(동) 07:31 공무원연금공단 07:49 시청2청사 07:51 회수 08:03 천제연 08:11
+
+655번(16:40 출발)
+공천포 16:40 토평초교 16:55 오일시장 16:59 남주고 17:02 중앙로터리(동) 17:11 공무원연금공단 17:29 시청2청사 17:31 회수 17:43 천제연 17:51
+
+655번(18:45 출발)
+공천포 18:45 토평초교 19:00 오일시장 19:04 남주고 19:07 중앙로터리(동) 19:16 공무원연금공단 19:34 시청2청사 19:36 회수 19:48 천제연 19:56
+
+655번(06:57 출발)
+천제연 06:57 회수 07:05 시청2청사 07:17 공무원연금공단 07:19 중앙로터리(서) 07:37 남주고 07:46 오일시장 07:49 토평초교 07:53 공천포 08:08
+
+655번(15:50 출발)
+천제연 15:50 회수 15:58 시청2청사 16:10 공무원연금공단 16:12 중앙로터리(서) 16:30 남주고 16:39 오일시장 16:42 토평초교 16:46 공천포 17:01
+
+655번(17:50 출발)
+천제연 17:50 회수 17:58 시청2청사 18:10 공무원연금공단 18:12 중앙로터리(서) 18:30 남주고 18:39 오일시장 18:42 토평초교 18:46 공천포 19:01
+    `;
+
+    // 데이터 파싱
+    const buses = [];
+    const blocks = rawData.trim().split(/\n\s*\n/);
+    
+    blocks.forEach(block => {
+        const lines = block.trim().split('\n');
+        if(lines.length < 2) return;
+        
+        const busNumber = lines[0].split('(')[0].trim();
+        const routeText = lines.slice(1).join(' ');
+        
+        const parts = routeText.split(/(\d{1,2}:\d{2})/);
+        const route = [];
+        
+        for(let i = 0; i < parts.length - 1; i += 2) {
+            const stopName = parts[i].trim();
+            const stopTime = parts[i+1];
+            if(stopName) route.push({ stop: stopName, time: stopTime });
+        }
+
+        const namjuIndex = route.findIndex(r => r.stop.includes('남주'));
+        
+        if(namjuIndex !== -1) {
+            buses.push({
+                busNumber: busNumber,
+                namjuTime: route[namjuIndex].time,
+                route: route,
+                namjuIndex: namjuIndex
+            });
+        }
+    });
+
+    let activeResults = [];
+    let timerInterval = null;
+    let isDefaultView = true;
+
+    function getCurrentMinutes() {
+        const now = new Date();
+        return now.getHours() * 60 + now.getMinutes();
+    }
+
+    function formatRemainTimeText(minutes) {
+        if (minutes === 0) return "곧 도착/출발";
+        if (minutes < 60) return `${minutes}분 뒤`;
+        const hours = Math.floor(minutes / 60);
+        const remainMins = minutes % 60;
+        return remainMins === 0 ? `${hours}시간 뒤` : `${hours}시간 ${remainMins}분 뒤`;
+    }
+
+    function getRouteString(routeArray, startIndex, endIndex) {
+        const stops = routeArray.slice(startIndex, endIndex + 1).map(r => r.stop);
+        if(stops.length > 3) {
+            return `${stops[0]} ➔ ... ➔ ${stops[stops.length-1]}`;
+        }
+        return stops.join(' ➔ ');
+    }
+
+    // 로고 클릭 및 첫 화면 진입 시 무조건 빠른 5대 표시
+    function showUpcomingBuses() {
+        document.getElementById('destination').value = '';
+        isDefaultView = true;
+        document.getElementById('sectionTitle').innerText = "가장 빨리 오는 남주고 출발 버스 5대";
+        
+        const currentMinutes = getCurrentMinutes();
+        let allFutureBuses = [];
+
+        buses.forEach(bus => {
+            // 하교용 버스 필터링 (남주고가 종점인 버스는 제외)
+            if (bus.namjuIndex >= bus.route.length - 1) return;
+
+            const timeParts = bus.namjuTime.split(':');
+            const busDepMinutes = parseInt(timeParts[0], 10) * 60 + parseInt(timeParts[1], 10);
+            const adjustedDepMinutes = busDepMinutes < 240 ? busDepMinutes + 1440 : busDepMinutes;
+            const adjustedCurrent = currentMinutes < 240 ? currentMinutes + 1440 : currentMinutes;
+
+            const remainMinutes = adjustedDepMinutes - adjustedCurrent;
+            
+            // 앞으로 올 버스면 무조건 배열에 담음 (시간 제한 없음)
+            if (remainMinutes >= 0) {
+                allFutureBuses.push({
+                    busNumber: bus.busNumber,
+                    namjuTime: bus.namjuTime,
+                    destName: bus.route[bus.route.length - 1].stop,
+                    destTime: bus.route[bus.route.length - 1].time,
+                    depMinutes: adjustedDepMinutes,
+                    routeString: getRouteString(bus.route, bus.namjuIndex, bus.route.length - 1)
+                });
+            }
+        });
+
+        // 시간순 정렬 후 무조건 가장 빠른 상위 5대만 슬라이스
+        allFutureBuses.sort((a, b) => a.depMinutes - b.depMinutes);
+        activeResults = allFutureBuses.slice(0, 5);
+
+        renderResults();
+        startAutoRefresh();
+    }
+
+    // 검색 기능 함수
+    function searchBus(autoRefreshed = false) {
+        const destination = document.getElementById('destination').value.trim();
+        if(!destination) {
+            if(!autoRefreshed) alert("목적지를 입력해주세요!");
+            return;
+        }
+
+        isDefaultView = false;
+        document.getElementById('sectionTitle').innerText = `'${destination}' 방면 결과 (시간순)`;
+        const currentMinutes = getCurrentMinutes();
+        activeResults = [];
+
+        buses.forEach(bus => {
+            const destIndex = bus.route.findIndex((r, idx) => idx > bus.namjuIndex && r.stop.includes(destination));
+            
+            if (destIndex !== -1) {
+                const timeParts = bus.namjuTime.split(':');
+                const busDepMinutes = parseInt(timeParts[0], 10) * 60 + parseInt(timeParts[1], 10);
+                const adjustedDepMinutes = busDepMinutes < 240 ? busDepMinutes + 1440 : busDepMinutes;
+                const adjustedCurrent = currentMinutes < 240 ? currentMinutes + 1440 : currentMinutes;
+
+                const remainMinutes = adjustedDepMinutes - adjustedCurrent;
+
+                if (remainMinutes >= 0) {
+                    activeResults.push({
+                        busNumber: bus.busNumber,
+                        namjuTime: bus.namjuTime,
+                        destName: bus.route[destIndex].stop,
+                        destTime: bus.route[destIndex].time,
+                        depMinutes: adjustedDepMinutes,
+                        routeString: getRouteString(bus.route, bus.namjuIndex, destIndex)
+                    });
+                }
+            }
+        });
+
+        activeResults.sort((a, b) => a.depMinutes - b.depMinutes);
+        renderResults();
+        startAutoRefresh();
+    }
+
+    // 화면 렌더링 함수
+    function renderResults() {
+        const container = document.getElementById('resultList');
+        container.innerHTML = '';
+
+        if(activeResults.length === 0) {
+            container.innerHTML = `<div class="no-result">해당 조건에 맞는 버스가 없거나,<br>오늘 남은 버스가 없습니다.</div>`;
+            return;
+        }
+
+        const currentMinutes = getCurrentMinutes();
+        const adjustedCurrent = currentMinutes < 240 ? currentMinutes + 1440 : currentMinutes;
+
+        activeResults.forEach(result => {
+            let remainMinutes = result.depMinutes - adjustedCurrent;
+            if(remainMinutes < 0) return; 
+
+            let remainText = formatRemainTimeText(remainMinutes);
+
+            const destInfoHTML = isDefaultView 
+                ? `<span>종점(${result.destName}) 도착: <strong>${result.destTime}</strong></span>`
+                : `<span>${result.destName} 도착: <strong>${result.destTime}</strong></span>`;
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="bus-title">${result.busNumber}</div>
+                <div class="time-info">
+                    <span>남주고 출발: <strong>${result.namjuTime}</strong></span>
+                    <span class="remain-time">${remainText}</span>
+                </div>
+                <div class="time-info" style="color:#555; font-size:0.9rem;">
+                    ${destInfoHTML}
+                </div>
+                <div class="route-info">${result.routeString}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // 1분마다 새로고침하여 다음 버스를 갱신 (지나간 버스는 사라지고 다음 버스가 채워짐)
+    function startAutoRefresh() {
+        if(timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (isDefaultView) {
+                showUpcomingBuses(); 
+            } else {
+                searchBus(true); 
+            }
+        }, 60000);
+    }
+
+    window.onload = showUpcomingBuses;
+
+</script>
+</body>
+</html>
