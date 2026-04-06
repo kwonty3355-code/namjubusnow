@@ -53,12 +53,12 @@
             text-align: center;
             color: #b0b3c6;
             font-size: 0.9rem;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .search-box {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         input[type="text"] {
             flex: 1;
@@ -82,6 +82,29 @@
         button:hover {
             background-color: #357abd;
         }
+        
+        /* 즐겨찾기 버튼 영역 */
+        .favorites-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            min-height: 30px;
+        }
+        .fav-btn {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .fav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         .section-title {
             font-size: 1.1rem;
             font-weight: bold;
@@ -89,7 +112,20 @@
             margin-bottom: 15px;
             border-bottom: 2px solid #333652;
             padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+        .fav-icon {
+            cursor: pointer;
+            font-size: 1.3rem;
+            color: #f1c40f;
+            transition: transform 0.2s;
+        }
+        .fav-icon:hover {
+            transform: scale(1.2);
+        }
+
         .result-container {
             display: flex;
             flex-direction: column;
@@ -108,33 +144,54 @@
             font-weight: bold;
             color: #0056b3;
             margin-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 8px;
         }
-        .time-info {
+        .time-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 1rem;
-            margin-bottom: 5px;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            padding: 4px 0;
         }
         .remain-time {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: bold;
             color: #e74c3c;
         }
-        .tomorrow-time {
-            font-size: 1.1rem;
+        .remain-time-small {
+            font-size: 1rem;
             font-weight: bold;
-            color: #2ecc71; /* 주황색에서 초록색으로 변경 */
+            color: #e67e22; /* 다음 버스는 살짝 연한 색 */
         }
+        .tomorrow-time {
+            color: #2ecc71; 
+        }
+        
         .route-info {
             font-size: 0.85rem;
             color: #7f8c8d;
             margin-top: 10px;
-            line-height: 1.4;
-            /* 텍스트가 잘리지 않고 전체 경로가 다 보이도록 수정 */
+            line-height: 1.6;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        /* 정류장 클릭 가능 속성 */
+        .clickable-stop {
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            transition: color 0.2s;
+        }
+        .clickable-stop:hover {
+            color: var(--primary-color);
+            font-weight: bold;
         }
         .highlight-dest {
-            color: #f39c12; /* 검색한 목적지를 주황색으로 표시 */
+            color: #f39c12; 
             font-weight: bold;
         }
         .no-result {
@@ -174,9 +231,12 @@
     <p class="subtitle">목적지나 버스 번호를 입력하면 가장 빠른 버스를 찾아드려요</p>
     
     <div class="search-box">
-        <input type="text" id="destination" placeholder="예: 중앙로, 오일장, 615" onkeypress="if(event.key === 'Enter') searchBus()">
+        <input type="text" id="destination" list="searchSuggestions" placeholder="예: 중앙로, 오일장, 615" onkeypress="if(event.key === 'Enter') searchBus()">
+        <datalist id="searchSuggestions"></datalist>
         <button onclick="searchBus()">검색</button>
     </div>
+
+    <div class="favorites-container" id="favoritesContainer"></div>
 
     <div id="sectionTitle" class="section-title">가장 빨리 오는 버스</div>
 
@@ -468,6 +528,7 @@
 `;
 
     const parsedBuses = [];
+    const autocompleteSet = new Set(); // 검색어 자동완성용 데이터 모음
 
     const aliases = {
         "헬스케어": "헬스케어타운",
@@ -508,6 +569,9 @@
             const routeStr = lines.slice(1).join(' ').trim(); 
             const stops = parseRouteString(routeStr);
             
+            autocompleteSet.add(busNo); // 버스 번호 추가
+            stops.forEach(s => autocompleteSet.add(s.name)); // 모든 정류장 이름 추가
+            
             const namjuIndex = stops.findIndex(s => s.name.includes('남주고') || s.name.includes('남주중고'));
             
             if (namjuIndex !== -1 && namjuIndex < stops.length - 1) { 
@@ -520,6 +584,17 @@
                 });
             }
         });
+
+        // 자동완성 데이터(Datalist) 생성
+        const dataList = document.getElementById('searchSuggestions');
+        Array.from(autocompleteSet).sort().forEach(keyword => {
+            const option = document.createElement('option');
+            option.value = keyword;
+            dataList.appendChild(option);
+        });
+
+        // 시작 시 즐겨찾기 목록 불러오기
+        loadFavorites();
     }
 
     function getBusTimeInfo(timeStr) {
@@ -545,68 +620,128 @@
         return { diff, isTomorrow };
     }
 
-    function renderBuses(buses, searchTerm = '') {
+    // ⭐ 즐겨찾기 로직
+    function loadFavorites() {
+        const favs = JSON.parse(localStorage.getItem('namjugo_favs') || '[]');
+        const container = document.getElementById('favoritesContainer');
+        container.innerHTML = '';
+        favs.forEach(fav => {
+            const btn = document.createElement('button');
+            btn.className = 'fav-btn';
+            btn.innerText = `★ ${fav}`;
+            btn.onclick = () => {
+                document.getElementById('destination').value = fav;
+                searchBus();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    function toggleFavorite(term) {
+        if(!term) return;
+        let favs = JSON.parse(localStorage.getItem('namjugo_favs') || '[]');
+        if (favs.includes(term)) {
+            favs = favs.filter(f => f !== term); // 이미 있으면 삭제
+        } else {
+            favs.push(term); // 없으면 추가
+        }
+        localStorage.setItem('namjugo_favs', JSON.stringify(favs));
+        loadFavorites();
+        updateTitleHeader(term); // 별 모양 업데이트
+    }
+
+    function updateTitleHeader(searchTerm) {
+        const titleEl = document.getElementById('sectionTitle');
+        if (!searchTerm) {
+            titleEl.innerHTML = `가장 빨리 오는 버스`;
+            return;
+        }
+        let favs = JSON.parse(localStorage.getItem('namjugo_favs') || '[]');
+        const isFav = favs.includes(searchTerm);
+        const star = isFav ? '★' : '☆';
+        titleEl.innerHTML = `
+            '${searchTerm}' 방면 버스 정보
+            <span class="fav-icon" onclick="toggleFavorite('${searchTerm}')" title="즐겨찾기 등록/해제">${star}</span>
+        `;
+    }
+
+    // 클릭으로 검색 실행 (정류장 이름 누를 때)
+    window.searchForStop = function(stopName) {
+        document.getElementById('destination').value = stopName;
+        searchBus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 화면 렌더링 (그룹화 적용)
+    function renderGroupedBuses(groupedBuses, searchTerm = '') {
         const container = document.getElementById('resultList');
         container.innerHTML = '';
 
-        if (buses.length === 0) {
-            container.innerHTML = '<div class="no-result">남주고등학교에서 바로 갈수없는 장소에요.</div>';
+        if (groupedBuses.length === 0) {
+            container.innerHTML = '<div class="no-result">남주고등학교에서 바로 갈 수 없는 장소에요.</div>';
             return;
         }
 
-        buses.forEach(bus => {
+        groupedBuses.forEach(group => {
             const div = document.createElement('div');
             div.className = 'card';
             
-            const fullRoute = bus.stops.map((s, idx) => {
-                let text = `${s.name} ${s.time}`;
+            // 1. 그룹 내 버스 시간들 표시 (최대 3대)
+            let schedulesHtml = group.schedules.slice(0, 3).map((sch, i) => {
+                let remainText = '';
+                let spanClass = i === 0 ? 'remain-time' : 'remain-time-small';
+
+                if (sch.isTomorrow) {
+                    remainText = `내일 ${sch.namjuTime} 출발`;
+                    spanClass += ' tomorrow-time';
+                } else {
+                    const m = Math.floor(sch.diff);
+                    if (m === 0) remainText = '곧 도착';
+                    else if (m > 60) remainText = `${Math.floor(m/60)}시간 ${m%60}분 후`;
+                    else remainText = `${m}분 후`;
+                }
+
+                const label = i === 0 ? '제일 빠른 버스' : '그 다음 버스';
+                return `
+                    <div class="time-row">
+                        <span>${label} <b>(${sch.namjuTime})</b></span>
+                        <span class="${spanClass}">${remainText}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // 2. 전체 노선 렌더링 (클릭 이벤트 추가)
+            const fullRoute = group.stops.map((s, idx) => {
+                // 노선표에는 시간표시 없이 이름만 깔끔하게 나오도록 수정
+                let html = `<span class="clickable-stop" onclick="searchForStop('${s.name}')">${s.name}</span>`;
                 
-                if (idx === bus.namjuIndex) {
-                    return `<b>[${text}]</b>`;
-                } else if (searchTerm && s.name.includes(searchTerm) && idx > bus.namjuIndex) {
-                    if (!bus.busNo.includes(searchTerm)) {
-                        return `<span class="highlight-dest">${text}</span>`;
+                if (idx === group.namjuIndex) {
+                    return `<b>[${html}]</b>`;
+                } else if (searchTerm && s.name.includes(searchTerm) && idx > group.namjuIndex) {
+                    if (!group.busNo.includes(searchTerm)) {
+                        return `<span class="highlight-dest">${html}</span>`;
                     }
                 }
-                return text;
+                return html;
             }).join(' → ');
 
-            let remainText = '';
-            let spanClass = 'remain-time';
-
-            if (bus.isTomorrow) {
-                remainText = `내일 ${bus.namjuTime} 출발 예정`;
-                spanClass = 'tomorrow-time'; 
-            } else {
-                const m = Math.floor(bus.diff);
-                if (m === 0) remainText = '곧 도착';
-                else if (m > 60) {
-                    const h = Math.floor(m / 60);
-                    const remainM = m % 60;
-                    remainText = remainM > 0 ? `${h}시간 ${remainM}분 후` : `${h}시간 후`;
-                } else {
-                    remainText = `${m}분 후`;
-                }
-            }
-
             div.innerHTML = `
-                <div class="bus-title">${bus.busNo}</div>
-                <div class="time-info">
-                    <span>남주고 출발: ${bus.namjuTime}</span>
-                    <span class="${spanClass}">${remainText}</span>
-                </div>
+                <div class="bus-title">${group.busNo}</div>
+                ${schedulesHtml}
                 <div class="route-info">${fullRoute}</div>
             `;
             container.appendChild(div);
         });
     }
 
-    function getUpcomingBuses(searchTerm = '') {
+    function getUpcomingBusesGrouped(searchTerm = '') {
+        // 모든 버스의 남은 시간 계산
         let upcoming = parsedBuses.map(bus => {
             const timeInfo = getBusTimeInfo(bus.namjuTime);
             return { ...bus, diff: timeInfo.diff, isTomorrow: timeInfo.isTomorrow };
         });
 
+        // 검색 필터링
         if (searchTerm) {
             upcoming = upcoming.filter(bus => {
                 if (bus.busNo.includes(searchTerm)) return true;
@@ -615,14 +750,41 @@
             });
         }
 
-        upcoming.sort((a, b) => a.diff - b.diff);
-        return upcoming.slice(0, 5);
+        // 💡 버스 번호(busNo)를 기준으로 여러 시간대를 묶어줌 (그룹화)
+        const groups = new Map();
+        upcoming.forEach(bus => {
+            if(!groups.has(bus.busNo)) {
+                groups.set(bus.busNo, {
+                    busNo: bus.busNo,
+                    stops: bus.stops,
+                    namjuIndex: bus.namjuIndex,
+                    schedules: []
+                });
+            }
+            groups.get(bus.busNo).schedules.push({
+                namjuTime: bus.namjuTime,
+                diff: bus.diff,
+                isTomorrow: bus.isTomorrow
+            });
+        });
+
+        // 그룹 내에서 시간순으로 정렬
+        let groupedArray = Array.from(groups.values());
+        groupedArray.forEach(g => {
+            g.schedules.sort((a, b) => a.diff - b.diff);
+        });
+
+        // 그룹 간의 순서는 '가장 빠른 버스가 있는 순서대로' 정렬
+        groupedArray.sort((a, b) => a.schedules[0].diff - b.schedules[0].diff);
+
+        // 노선 자체는 5개까지만 노출 (노선 1개당 시간은 3개씩 나옴)
+        return groupedArray.slice(0, 5);
     }
 
     function showUpcomingBuses() {
-        document.getElementById('sectionTitle').innerText = '가장 빨리 오는 버스';
-        const buses = getUpcomingBuses();
-        renderBuses(buses, ''); 
+        updateTitleHeader('');
+        const grouped = getUpcomingBusesGrouped();
+        renderGroupedBuses(grouped, ''); 
     }
 
     function resetAndShowUpcoming() {
@@ -637,24 +799,25 @@
             return;
         }
         
-        document.getElementById('sectionTitle').innerText = `'${input}'(으)로 가는 가장 빨리 오는 버스`;
-        
         const actualSearchTerm = aliases[input] || input;
-        const buses = getUpcomingBuses(actualSearchTerm);
-        renderBuses(buses, actualSearchTerm); 
+        updateTitleHeader(input);
+        const grouped = getUpcomingBusesGrouped(actualSearchTerm);
+        renderGroupedBuses(grouped, actualSearchTerm); 
     }
 
+    // 초기 실행
     initData();
     showUpcomingBuses();
 
+    // 1분마다 자동 새로고침
     setInterval(() => {
         const input = document.getElementById('destination').value.trim();
         if (!input) {
             showUpcomingBuses();
         } else {
             const actualSearchTerm = aliases[input] || input;
-            const buses = getUpcomingBuses(actualSearchTerm);
-            renderBuses(buses, actualSearchTerm);
+            const grouped = getUpcomingBusesGrouped(actualSearchTerm);
+            renderGroupedBuses(grouped, actualSearchTerm);
         }
     }, 60000);
 
