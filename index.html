@@ -83,7 +83,6 @@
             background-color: #357abd;
         }
         
-        /* 즐겨찾기 버튼 영역 */
         .favorites-container {
             display: flex;
             flex-wrap: wrap;
@@ -105,7 +104,6 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
-        /* 환경 지킴이 메시지 박스 */
         .eco-message {
             background-color: rgba(46, 204, 113, 0.15);
             border: 1px solid #2ecc71;
@@ -114,9 +112,43 @@
             border-radius: 8px;
             text-align: center;
             font-size: 0.9rem;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 🌟 맞춤 추천 메시지 스타일 */
+        .recommendation-box {
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            color: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: none; /* 기본은 숨김 */
+        }
+        .recommendation-title {
+            font-weight: bold;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .recommendation-desc {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .rec-bus-info {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            cursor: pointer;
         }
 
         .section-title {
@@ -177,7 +209,6 @@
         .tomorrow-time {
             color: #2ecc71; 
         }
-        
         .route-info {
             font-size: 0.85rem;
             color: #7f8c8d;
@@ -187,7 +218,6 @@
             padding: 10px;
             border-radius: 8px;
         }
-        
         .clickable-stop {
             cursor: pointer;
             text-decoration: underline;
@@ -247,6 +277,12 @@
     <div class="favorites-container" id="favoritesContainer"></div>
 
     <div id="ecoMessage" class="eco-message"></div>
+
+    <div id="recommendationBox" class="recommendation-box">
+        <div class="recommendation-title" id="recTitle">✨ 사용자 맞춤 추천</div>
+        <div class="recommendation-desc" id="recDesc"></div>
+        <div class="rec-bus-info" id="recBusInfo" onclick="scrollToTop()"></div>
+    </div>
 
     <div id="sectionTitle" class="section-title">가장 빨리 오는 버스</div>
 
@@ -603,13 +639,12 @@
         });
 
         loadFavorites();
-        updateEcoMessage(); // 🌿 사이트 켤 때마다 환경 문구 업데이트
+        updateEcoMessage(); 
     }
 
-    // 🌿 방문 횟수 기반 환경 메시지 업데이트 함수
     function updateEcoMessage() {
         let visitCount = parseInt(localStorage.getItem('namjugo_visits') || '0');
-        visitCount++; // 접속할 때마다 +1
+        visitCount++; 
         localStorage.setItem('namjugo_visits', visitCount);
 
         const messages = [
@@ -621,7 +656,6 @@
             "♻️ 지구를 구하는 남주고 학생! 비닐봉투 7개를 아꼈어요."
         ];
         
-        // 방문 횟수에 따라 문구를 순서대로 보여줌
         const msgIndex = (visitCount - 1) % messages.length;
         document.getElementById('ecoMessage').innerText = messages[msgIndex];
     }
@@ -647,6 +681,76 @@
         }
 
         return { diff, isTomorrow };
+    }
+
+    // 🌟 1. 검색 기록 저장 함수
+    function saveSearchHistory(term) {
+        if (!term) return;
+        let history = JSON.parse(localStorage.getItem('namjugo_history') || '{}');
+        history[term] = (history[term] || 0) + 1;
+        localStorage.setItem('namjugo_history', JSON.stringify(history));
+    }
+
+    // 🌟 2. 가장 많이 검색한 목적지 가져오기
+    function getTopDestination() {
+        let history = JSON.parse(localStorage.getItem('namjugo_history') || '{}');
+        const keys = Object.keys(history);
+        if (keys.length === 0) return null;
+        return keys.sort((a, b) => history[b] - history[a])[0];
+    }
+
+    // 🌟 3. 혼잡 시간대(하교 시간) 체크 함수 (오후 4시 ~ 6시 30분 가정)
+    function isRushHour() {
+        const now = new Date();
+        const h = now.getHours();
+        const m = now.getMinutes();
+        const totalMins = h * 60 + m;
+        // 16:00 (960분) ~ 18:30 (1110분)
+        return totalMins >= 960 && totalMins <= 1110; 
+    }
+
+    // 🌟 4. 맞춤 추천 버스 렌더링
+    function renderRecommendation() {
+        const topDest = getTopDestination();
+        const recBox = document.getElementById('recommendationBox');
+        
+        if (!topDest) {
+            recBox.style.display = 'none';
+            return;
+        }
+
+        const buses = getUpcomingBusesFlat(topDest);
+        if (buses.length === 0 || buses[0].isTomorrow) {
+            recBox.style.display = 'none'; // 당장 탈 버스가 없으면 숨김
+            return;
+        }
+
+        let targetBus = buses[0];
+        let descText = `평소 자주 가시는 <b>'${topDest}'</b> 방면 가장 빠른 버스예요!`;
+        
+        // 혼잡 시간대이고, 다음 버스(buses[1])가 15분 내외로 올 경우 쾌적한 버스 추천
+        if (isRushHour() && buses.length > 1 && !buses[1].isTomorrow) {
+            const firstDiff = buses[0].diff;
+            const secondDiff = buses[1].diff;
+            
+            // 첫 번째 버스와 두 번째 버스 간격이 15분 이내라면
+            if (secondDiff - firstDiff <= 15) {
+                targetBus = buses[1];
+                descText = `지금은 하교 시간이라 바로 오는 버스가 붐빌 수 있어요. <b>조금 여유로운 다음 버스</b>를 추천해 드려요! ('${topDest}' 방면)`;
+            }
+        }
+
+        document.getElementById('recDesc').innerHTML = descText;
+        
+        const m = Math.floor(targetBus.diff);
+        const timeText = m === 0 ? '곧 도착' : `${m}분 후`;
+        
+        document.getElementById('recBusInfo').innerHTML = `
+            <span>🚌 ${targetBus.busNo}번</span>
+            <span>⏱️ ${timeText} (${targetBus.namjuTime})</span>
+        `;
+        
+        recBox.style.display = 'block';
     }
 
     function loadFavorites() {
@@ -699,7 +803,10 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // ⭐ 1블럭 = 1시간(1대의 버스)만 렌더링하도록 수정된 함수
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function renderFlatBuses(buses, searchTerm = '') {
         const container = document.getElementById('resultList');
         container.innerHTML = '';
@@ -713,7 +820,6 @@
             const div = document.createElement('div');
             div.className = 'card';
             
-            // 시간 표시 (딱 1개만)
             let remainText = '';
             let spanClass = 'remain-time';
 
@@ -734,7 +840,6 @@
                 </div>
             `;
 
-            // 노선 렌더링
             const fullRoute = bus.stops.map((s, idx) => {
                 let html = `<span class="clickable-stop" onclick="searchForStop('${s.name}')">${s.name}</span>`;
                 
@@ -757,7 +862,6 @@
         });
     }
 
-    // ⭐ 복잡한 그룹화를 풀고, 다시 순수하게 5대의 버스만 가져오도록 수정
     function getUpcomingBusesFlat(searchTerm = '') {
         let upcoming = parsedBuses.map(bus => {
             const timeInfo = getBusTimeInfo(bus.namjuTime);
@@ -774,13 +878,14 @@
 
         upcoming.sort((a, b) => a.diff - b.diff);
 
-        return upcoming.slice(0, 5); // 가장 빠른 버스 5대만 잘라서 리턴
+        return upcoming.slice(0, 5); 
     }
 
     function showUpcomingBuses() {
         updateTitleHeader('');
         const flatBuses = getUpcomingBusesFlat('');
         renderFlatBuses(flatBuses, ''); 
+        renderRecommendation(); // 🌟 메인 화면일 때 추천 박스 렌더링
     }
 
     function resetAndShowUpcoming() {
@@ -796,9 +901,13 @@
         }
         
         const actualSearchTerm = aliases[input] || input;
+        
+        saveSearchHistory(actualSearchTerm); // 🌟 검색할 때마다 기록 저장
+        
         updateTitleHeader(input);
         const flatBuses = getUpcomingBusesFlat(actualSearchTerm);
         renderFlatBuses(flatBuses, actualSearchTerm); 
+        renderRecommendation(); // 🌟 검색 후에도 추천 박스 업데이트
     }
 
     // 초기 실행
@@ -814,6 +923,7 @@
             const actualSearchTerm = aliases[input] || input;
             const flatBuses = getUpcomingBusesFlat(actualSearchTerm);
             renderFlatBuses(flatBuses, actualSearchTerm);
+            renderRecommendation();
         }
     }, 60000);
 
