@@ -1,0 +1,21 @@
+{
+  "name": "남주GO!",
+  "short_name": "남주GO",
+  "description": "남주고등학교 가장 빠른 버스 찾기",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0e0f37",
+  "theme_color": "#4a90e2",
+  "icons": [
+    {
+      "src": "Image.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "Image.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
