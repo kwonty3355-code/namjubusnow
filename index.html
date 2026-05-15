@@ -117,7 +117,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* 🌟 맞춤 추천 메시지 스타일 */
         .recommendation-box {
             background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
             color: #fff;
@@ -125,7 +124,7 @@
             border-radius: 12px;
             margin-bottom: 20px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            display: none; /* 기본은 숨김 */
+            display: none; 
         }
         .recommendation-title {
             font-weight: bold;
@@ -269,8 +268,7 @@
     <p class="subtitle">목적지나 버스 번호를 입력하면 가장 빠른 버스를 찾아드려요</p>
     
     <div class="search-box">
-        <input type="text" id="destination" list="searchSuggestions" placeholder="예: 중앙로, 오일장, 615" onkeypress="if(event.key === 'Enter') searchBus()">
-        <datalist id="searchSuggestions"></datalist>
+        <input type="text" id="destination" placeholder="예: 중앙로, 오일장, 615" onkeypress="if(event.key === 'Enter') searchBus()">
         <button onclick="searchBus()">검색</button>
     </div>
 
@@ -574,7 +572,6 @@
 `;
 
     const parsedBuses = [];
-    const autocompleteSet = new Set();
 
     const aliases = {
         "헬스케어": "헬스케어타운",
@@ -615,9 +612,6 @@
             const routeStr = lines.slice(1).join(' ').trim(); 
             const stops = parseRouteString(routeStr);
             
-            autocompleteSet.add(busNo); 
-            stops.forEach(s => autocompleteSet.add(s.name)); 
-            
             const namjuIndex = stops.findIndex(s => s.name.includes('남주고') || s.name.includes('남주중고'));
             
             if (namjuIndex !== -1 && namjuIndex < stops.length - 1) { 
@@ -631,12 +625,7 @@
             }
         });
 
-        const dataList = document.getElementById('searchSuggestions');
-        Array.from(autocompleteSet).sort().forEach(keyword => {
-            const option = document.createElement('option');
-            option.value = keyword;
-            dataList.appendChild(option);
-        });
+        // datalist 렌더링 코드 삭제됨
 
         loadFavorites();
         updateEcoMessage(); 
@@ -683,7 +672,6 @@
         return { diff, isTomorrow };
     }
 
-    // 🌟 1. 검색 기록 저장 함수
     function saveSearchHistory(term) {
         if (!term) return;
         let history = JSON.parse(localStorage.getItem('namjugo_history') || '{}');
@@ -691,7 +679,6 @@
         localStorage.setItem('namjugo_history', JSON.stringify(history));
     }
 
-    // 🌟 2. 가장 많이 검색한 목적지 가져오기
     function getTopDestination() {
         let history = JSON.parse(localStorage.getItem('namjugo_history') || '{}');
         const keys = Object.keys(history);
@@ -699,17 +686,14 @@
         return keys.sort((a, b) => history[b] - history[a])[0];
     }
 
-    // 🌟 3. 혼잡 시간대(하교 시간) 체크 함수 (오후 4시 ~ 6시 30분 가정)
     function isRushHour() {
         const now = new Date();
         const h = now.getHours();
         const m = now.getMinutes();
         const totalMins = h * 60 + m;
-        // 16:00 (960분) ~ 18:30 (1110분)
         return totalMins >= 960 && totalMins <= 1110; 
     }
 
-    // 🌟 4. 맞춤 추천 버스 렌더링
     function renderRecommendation() {
         const topDest = getTopDestination();
         const recBox = document.getElementById('recommendationBox');
@@ -721,19 +705,17 @@
 
         const buses = getUpcomingBusesFlat(topDest);
         if (buses.length === 0 || buses[0].isTomorrow) {
-            recBox.style.display = 'none'; // 당장 탈 버스가 없으면 숨김
+            recBox.style.display = 'none'; 
             return;
         }
 
         let targetBus = buses[0];
         let descText = `평소 자주 가시는 <b>'${topDest}'</b> 방면 가장 빠른 버스예요!`;
         
-        // 혼잡 시간대이고, 다음 버스(buses[1])가 15분 내외로 올 경우 쾌적한 버스 추천
         if (isRushHour() && buses.length > 1 && !buses[1].isTomorrow) {
             const firstDiff = buses[0].diff;
             const secondDiff = buses[1].diff;
             
-            // 첫 번째 버스와 두 번째 버스 간격이 15분 이내라면
             if (secondDiff - firstDiff <= 15) {
                 targetBus = buses[1];
                 descText = `지금은 하교 시간이라 바로 오는 버스가 붐빌 수 있어요. <b>조금 여유로운 다음 버스</b>를 추천해 드려요! ('${topDest}' 방면)`;
@@ -885,7 +867,7 @@
         updateTitleHeader('');
         const flatBuses = getUpcomingBusesFlat('');
         renderFlatBuses(flatBuses, ''); 
-        renderRecommendation(); // 🌟 메인 화면일 때 추천 박스 렌더링
+        renderRecommendation(); 
     }
 
     function resetAndShowUpcoming() {
@@ -902,19 +884,17 @@
         
         const actualSearchTerm = aliases[input] || input;
         
-        saveSearchHistory(actualSearchTerm); // 🌟 검색할 때마다 기록 저장
+        saveSearchHistory(actualSearchTerm); 
         
         updateTitleHeader(input);
         const flatBuses = getUpcomingBusesFlat(actualSearchTerm);
         renderFlatBuses(flatBuses, actualSearchTerm); 
-        renderRecommendation(); // 🌟 검색 후에도 추천 박스 업데이트
+        renderRecommendation(); 
     }
 
-    // 초기 실행
     initData();
     showUpcomingBuses();
 
-    // 1분마다 자동 새로고침
     setInterval(() => {
         const input = document.getElementById('destination').value.trim();
         if (!input) {
