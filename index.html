@@ -207,14 +207,22 @@
             margin-bottom: 5px;
             padding: 4px 0;
         }
+        
+        /* 수정된 부분: 남은 시간별 색상 클래스 추가 */
         .remain-time {
             font-size: 1.2rem;
             font-weight: bold;
-            color: #e74c3c;
         }
-        .tomorrow-time {
-            color: #2ecc71; 
+        .time-red {
+            color: #ff4757; /* 3분 미만: 빨강 */
         }
+        .time-orange {
+            color: #ff9f43; /* 5분 미만: 주황 */
+        }
+        .time-green {
+            color: #2ecc71; /* 그 외: 초록 */
+        }
+        
         .route-info {
             font-size: 0.85rem;
             color: #7f8c8d;
@@ -632,8 +640,6 @@
             }
         });
 
-        // datalist 렌더링 코드 삭제됨
-
         loadFavorites();
         updateEcoMessage(); 
     }
@@ -812,14 +818,24 @@
             let remainText = '';
             let spanClass = 'remain-time';
 
+            // 수정된 부분: 남은 시간에 따른 텍스트 및 색상 조건 설정
             if (bus.isTomorrow) {
                 remainText = `내일 ${bus.namjuTime} 출발`;
-                spanClass += ' tomorrow-time';
+                spanClass += ' time-green';
             } else {
                 const m = Math.floor(bus.diff);
+                
                 if (m === 0) remainText = '곧 도착';
                 else if (m > 60) remainText = `${Math.floor(m/60)}시간 ${m%60}분 후`;
                 else remainText = `${m}분 후`;
+
+                if (m < 3) {
+                    spanClass += ' time-red';
+                } else if (m < 5) {
+                    spanClass += ' time-orange';
+                } else {
+                    spanClass += ' time-green';
+                }
             }
 
             const timeHtml = `
